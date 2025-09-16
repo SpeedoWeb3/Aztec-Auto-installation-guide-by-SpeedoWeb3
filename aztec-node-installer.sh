@@ -1,4 +1,3 @@
-# Aztec-Auto-installation-guide-by-SpeedoWeb3
 #!/bin/bash
 set -e
 
@@ -8,13 +7,13 @@ NC='\033[0m'
 echo -e "${CYAN}🔧 Starting Aztec Node Installation...${NC}"
 
 # === Root Access Echo ===
-sudo sh -c 'echo "• Root Access Enabled ✔"'
+sudo sh -c 'echo "✔ Root Access Enabled ✔"'
 
 # === System Requirements Check ===
 echo -e "${CYAN}🧠 Checking system specs...${NC}"
-MIN_RAM=16000000      # 16 GB in KB
+MIN_RAM=16000000
 MIN_CORES=4
-MIN_DISK=150           # 150 GB
+MIN_DISK=150
 
 RAM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 CORES=$(nproc)
