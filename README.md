@@ -1,4 +1,4 @@
-🚀 Aztec Node Auto-Installer Guide by SpeedoWeb3
+🚀 Aztec Node Auto-Installer Guide by @SpeedoWeb3
 
 This repository provides an automatic installation and management script for running an Aztec Node on your VPS.
 The script simplifies setup, configuration, updates, and monitoring — all from a single interactive menu.
@@ -32,7 +32,7 @@ The script simplifies setup, configuration, updates, and monitoring — all from
 
 Run this single command on your VPS:
 
-```sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'```
+``sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'``
 
 
 ---
@@ -41,14 +41,14 @@ Run this single command on your VPS:
 
 Once installed, launch the menu by running:
 
-cd ~/aztec
-./aztec-node-installer.sh
+``cd ~/aztec``
+``./aztec-node-installer.sh``
 
 Menu Options:
 
 ===================================
          🚀 AZTEC NODE GUIDE
- Script made by SpeedoWeb3 with ♥️
+ Script made by @SpeedoWeb3 with ♥️
 ===================================
 
 1) Full Install (with Snapshot)
@@ -67,9 +67,8 @@ Menu Options:
 🔗 Resources
 
 🌐 Aztec Explorer (Nethermind)
-
-📜 RPC Health Check Script
-
+Link~ https://aztec.nethermind.io/explore
+📜 RPC Health Check Script by web3.creed
 
 
 ---
@@ -79,3 +78,4 @@ Menu Options:
 Script by SpeedoWeb3
 
 RPC Health Guide inspired by Catman Creed
+Special credits to @web3hendrix and @assshhh_2127
