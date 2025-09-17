@@ -30,9 +30,12 @@ The script simplifies setup, configuration, updates, and monitoring — all from
 
 ⚡ Quick Install
 
-Run this single command on your VPS:
+## 🛠️ One-Command Full Menu Setup  
 
-```sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)' ```
+Run this command in your terminal to launch the interactive menu:
+
+```bash
+sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'
 
 
 ---
@@ -77,5 +80,8 @@ Link~ https://aztec.nethermind.io/explore
 
 Script by @SpeedoWeb3
 
-RPC Health Guide inspired by Catman Creed 
+RPC Health Guide inspired by Catman Creed
+
+And
+
 Special thanks to @web3hendrix and @assshhh_2127
