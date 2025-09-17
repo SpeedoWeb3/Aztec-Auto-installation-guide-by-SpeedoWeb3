@@ -32,7 +32,7 @@ The script simplifies setup, configuration, updates, and monitoring — all from
 
 Run this single command on your VPS:
 
-``sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'``
+```sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'
 
 
 ---
@@ -70,12 +70,11 @@ Menu Options:
 Link~ https://aztec.nethermind.io/explore
 📜 RPC Health Check Script by @web3.creed
 
-Link~ ```sudo bash -c 'bash <(curl -Ls https:// raw.githubusercontent.com/DeepPatel2412/Aztec-Tools/main/RPC%20Health%20Check)'```
 ---
 
 ❤️ Credits
 
-Script by SpeedoWeb3
+Script by @SpeedoWeb3
 
-RPC Health Guide inspired by Catman Creed
-Special credits to @web3hendrix and @assshhh_2127
+RPC Health Guide inspired by Catman Creed 
+Special thanks to @web3hendrix and @assshhh_2127
