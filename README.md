@@ -37,14 +37,3 @@ Run this command in your terminal to launch the interactive menu:
 ```bash
 sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'
 
-*Hisjnsns
-
-
-
-
-
-
-
-
-
-
