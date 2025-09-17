@@ -9,12 +9,20 @@ The script simplifies setup, configuration, updates, and monitoring — all from
 📌 Features
 
 ✅ Full install with snapshot (fresh setup)
+
 ✅ Run & manage your Aztec node (Docker-based)
+
 ✅ View live logs
+
 ✅ View & reconfigure .env safely
-✅ RPC Health Check (with Catman Creed’s guide)
+
+✅ RPC Health Check (with Catman 
+Creed’s guide)
+
 ✅ Delete node (with confirmation)
+
 ✅ Check important ports & Peer ID (with Nethermind explorer link)
+
 ✅ Update node easily
 
 
