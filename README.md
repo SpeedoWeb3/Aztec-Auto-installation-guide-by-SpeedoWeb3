@@ -68,9 +68,9 @@ Menu Options:
 
 🌐 Aztec Explorer (Nethermind)
 Link~ https://aztec.nethermind.io/explore
-📜 RPC Health Check Script by web3.creed
+📜 RPC Health Check Script by @web3.creed
 
-
+Link~ ```sudo bash -c 'bash <(curl -Ls https:// raw.githubusercontent.com/DeepPatel2412/Aztec-Tools/main/RPC%20Health%20Check)'```
 ---
 
 ❤️ Credits
