@@ -32,7 +32,7 @@ The script simplifies setup, configuration, updates, and monitoring — all from
 
 Run this single command on your VPS:
 
-sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'
+```sudo bash -c 'bash <(curl -Ls https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)'```
 
 
 ---
