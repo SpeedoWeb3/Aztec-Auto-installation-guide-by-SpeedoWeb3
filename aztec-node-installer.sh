@@ -31,23 +31,23 @@ install_aztec_node() {
     if [ ! -f /etc/os-release ]; then echo "Not Ubuntu or Debian"; exit 1; fi
 
     echo -e "${CYAN}Checking for existing Aztec Docker containers/images...${NC}"
-    AZTEC_CONTAINERS=$(docker ps -a --filter "ancestor=aztecprotocol/aztec" --format "{{.ID}}")
+    AZTEC_CONTAINERS=$(docker ps -a --filter "ancestor=aztecprotocol/aztec" --format "{{.Names}}")
     AZTEC_IMAGES=$(docker images aztecprotocol/aztec -q)
 
     if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_IMAGES" ]; then
       echo -e "${RED}⚠️ Existing Aztec Docker setup detected!${NC}"
-      echo "Containers: $AZTEC_CONTAINERS"
-      echo "Images: $AZTEC_IMAGES"
-      read -p "➡ Do you want to delete and reinstall Aztec? (Y/n): " del_choice
+      echo "Containers: ${AZTEC_CONTAINERS:-None}"
+      echo "Images: ${AZTEC_IMAGES:-None}"
+      read -p "➡ Do you want to delete and reinstall Aztec only? (Y/n): " del_choice
       if [[ ! "$del_choice" =~ ^[Yy]$ && -n "$del_choice" ]]; then
         echo "❌ Installation cancelled."; return
       fi
-      docker stop $AZTEC_CONTAINERS 2>/dev/null || true
-      docker rm $AZTEC_CONTAINERS 2>/dev/null || true
-      docker rmi $AZTEC_IMAGES 2>/dev/null || true
+      [ -n "$AZTEC_CONTAINERS" ] && docker stop $AZTEC_CONTAINERS && docker rm $AZTEC_CONTAINERS
+      [ -n "$AZTEC_IMAGES" ] && docker rmi $AZTEC_IMAGES
       echo "✅ Old Aztec Docker setup removed."
     fi
 
+    # Docker installation
     sudo apt-get install -y ca-certificates curl gnupg lsb-release
     sudo install -m 0755 -d /etc/apt/keyrings
     . /etc/os-release
@@ -62,13 +62,13 @@ install_aztec_node() {
 
     # Step 5: Firewall
     sudo apt install -y ufw >/dev/null 2>&1
-    sudo ufw allow 22
+    sudo ufw --force enable
+    sudo ufw allow 22/tcp
     sudo ufw allow ssh
     sudo ufw allow 40400/tcp
     sudo ufw allow 40400/udp
     sudo ufw allow 8080
     sudo ufw reload
-    sudo ufw --force enable
 
     # Step 6: Setup directory
     rm -rf ~/aztec && mkdir ~/aztec && cd ~/aztec
@@ -91,7 +91,6 @@ P2P_IP=$VPS_IP
 EOF
 
     echo -e "${CYAN}.env file created successfully ✅${NC}"
-    cat .env
 
     # Step 8: Create docker-compose.yml
     cat > docker-compose.yml <<'EOF'
@@ -120,14 +119,12 @@ services:
 EOF
 
     # Step 9: Snapshot restore (optional)
-    echo "--- Downloading snapshot..."
-    wget -O $HOME/aztec-testnet.tar.lz4 https://files5.blacknodes.net/aztec/aztec-testnet.tar.lz4 || echo "⚠️ Snapshot not found. Continuing without it..."
+    echo "--- Downloading snapshot (optional)..."
+    wget -O $HOME/aztec-testnet.tar.lz4 https://files5.blacknodes.net/aztec/aztec-testnet.tar.lz4 || echo "⚠️ Snapshot not found. Skipping..."
     if [ -f "$HOME/aztec-testnet.tar.lz4" ]; then
       lz4 -d $HOME/aztec-testnet.tar.lz4 | tar x -C $HOME/.aztec/testnet
       rm $HOME/aztec-testnet.tar.lz4
       echo "✅ Snapshot installed!"
-    else
-      echo "⚠️ Skipped snapshot (not available)."
     fi
 
     # Step 10: Start node
@@ -154,25 +151,27 @@ check_rpc_health() {
 
 check_ports_and_peerid() {
   echo "Checking important ports..."
-  declare -A PORTS=( ["40400/tcp"]="Aztec P2P (TCP)" ["40400/udp"]="Aztec P2P (UDP)" ["8545/tcp"]="RPC" ["3500/tcp"]="Custom" )
-  for p in "${!PORTS[@]}"; do
+  for p in "40400/tcp" "40400/udp" "8080/tcp"; do
     proto=${p##*/}; port=${p%%/*}
     if nc -${proto:0:1} -z -w2 127.0.0.1 "$port" >/dev/null 2>&1; then
-      echo "✅  Port $p (${PORTS[$p]}) is OPEN"
+      echo "✅ Port $p is OPEN"
     else
-      echo "❌  Port $p (${PORTS[$p]}) is CLOSED → Opening..."
-      sudo ufw allow "$port/$proto" >/dev/null 2>&1
+      echo "❌ Port $p is CLOSED"
     fi
   done
 
   echo "--- Checking Peer ID..."
   PEER_ID=$(docker logs aztec-sequencer 2>&1 | grep -o '"peerId":"[^"]*"' | head -n 1 | awk -F':' '{print $2}' | tr -d '"')
-  if [ -n "$PEER_ID" ]; then
-    echo "✅ Peer ID: $PEER_ID"
-    echo "🔗 Check it here: https://aztec.nethermind.io/explore"
-  else
-    echo "⚠️ Peer ID not found. Make sure your node is running."
-  fi
+  [ -n "$PEER_ID" ] && echo "✅ Peer ID: $PEER_ID" || echo "⚠️ Peer ID not found."
+}
+
+check_node_performance() {
+  echo "📊 Node Performance:"
+  echo "--- CPU & Memory ---"
+  top -b -n1 | head -n 5
+  echo ""
+  echo "--- Docker Stats ---"
+  docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 }
 
 # ───────────────────────────────────────────────
@@ -180,7 +179,7 @@ check_ports_and_peerid() {
 # ───────────────────────────────────────────────
 while true; do
   show_header
-  echo -e "${CYAN}1) Full Install (with Snapshot)${NC}"
+  echo -e "${CYAN}1) Full Install (with Snapshot - optional)${NC}"
   echo -e "${CYAN}2) Run Node${NC}"
   echo -e "${CYAN}3) View Logs${NC}"
   echo -e "${CYAN}4) View & Reconfigure .env${NC}"
@@ -189,9 +188,10 @@ while true; do
   echo -e "${CYAN}7) Check Ports & Peer ID${NC}"
   echo -e "${CYAN}8) Update Node${NC}"
   echo -e "${CYAN}9) Check Node Version${NC}"
-  echo -e "${CYAN}10) Exit${NC}"
+  echo -e "${CYAN}10) Check Node Performance${NC}"
+  echo -e "${CYAN}11) Exit${NC}"
   echo ""
-  read -p "Choose option (1-10): " choice
+  read -p "Choose option (1-11): " choice
 
   case $choice in
     1) install_aztec_node ;;
@@ -220,11 +220,31 @@ EOF
        fi
        ;;
     5) check_rpc_health ;;
-    6) docker stop aztec-sequencer 2>/dev/null; docker rm aztec-sequencer 2>/dev/null; rm -rf ~/aztec ~/.aztec/testnet; echo "✅ Node deleted." ;;
+    6) 
+       echo -e "${RED}⚠️ This will delete your Aztec Node only:${NC}"
+       echo "   - ~/aztec"
+       echo "   - ~/.aztec/testnet"
+       echo "   - Docker container: aztec-sequencer"
+       read -p "➡ Are you sure? (Y/n): " confirm1
+       if [[ "$confirm1" =~ ^[Yy]$ || -z "$confirm1" ]]; then
+         read -p "➡ Are you REALLY sure? This cannot be undone. (Y/n): " confirm2
+         if [[ "$confirm2" =~ ^[Yy]$ || -z "$confirm2" ]]; then
+           docker stop aztec-sequencer 2>/dev/null
+           docker rm aztec-sequencer 2>/dev/null
+           rm -rf ~/aztec ~/.aztec/testnet
+           echo "✅ Node deleted."
+         else
+           echo "❌ Second confirmation failed. Cancelled."
+         fi
+       else
+         echo "❌ Delete cancelled."
+       fi
+       ;;
     7) check_ports_and_peerid ;;
     8) docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && docker compose up -d) ;;
     9) docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version ;;
-    10) echo "Exiting..."; break ;;
+    10) check_node_performance ;;
+    11) echo "Exiting..."; break ;;
     *) echo "Invalid option" ;;
   esac
 
