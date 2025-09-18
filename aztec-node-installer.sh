@@ -31,8 +31,8 @@ install_aztec_node() {
     if [ ! -f /etc/os-release ]; then echo "Not Ubuntu or Debian"; exit 1; fi
 
     echo -e "${CYAN}Checking for existing Aztec Docker containers/images...${NC}"
-    AZTEC_CONTAINERS=$(docker ps -a --filter "ancestor=aztecprotocol/aztec" --format "{{.Names}}")
-    AZTEC_IMAGES=$(docker images aztecprotocol/aztec -q)
+    AZTEC_CONTAINERS=$(sudo docker ps -a --filter "ancestor=aztecprotocol/aztec" --format "{{.Names}}")
+    AZTEC_IMAGES=$(sudo docker images aztecprotocol/aztec -q)
 
     if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_IMAGES" ]; then
       echo -e "${RED}⚠️ Existing Aztec Docker setup detected!${NC}"
@@ -42,8 +42,8 @@ install_aztec_node() {
       if [[ ! "$del_choice" =~ ^[Yy]$ && -n "$del_choice" ]]; then
         echo "❌ Installation cancelled."; return
       fi
-      [ -n "$AZTEC_CONTAINERS" ] && docker stop $AZTEC_CONTAINERS && docker rm $AZTEC_CONTAINERS
-      [ -n "$AZTEC_IMAGES" ] && docker rmi $AZTEC_IMAGES
+      [ -n "$AZTEC_CONTAINERS" ] && sudo docker stop $AZTEC_CONTAINERS && sudo docker rm $AZTEC_CONTAINERS
+      [ -n "$AZTEC_IMAGES" ] && sudo docker rmi $AZTEC_IMAGES
       echo "✅ Old Aztec Docker setup removed."
     fi
 
@@ -59,6 +59,10 @@ install_aztec_node() {
     sudo systemctl enable docker
     sudo systemctl restart docker
     echo -e "${CYAN}• Docker Installed ✔${NC}"
+
+    # Fix Docker permission denied issue
+    sudo usermod -aG docker $USER
+    echo "✅ User added to docker group. Please log out and log back in (or run 'exec su - $USER') for changes to take effect."
 
     # Step 5: Firewall
     sudo apt install -y ufw >/dev/null 2>&1
@@ -128,7 +132,7 @@ EOF
     fi
 
     # Step 10: Start node
-    docker compose -f ~/aztec/docker-compose.yml up -d
+    sudo docker compose -f ~/aztec/docker-compose.yml up -d
     echo -e "${CYAN}Installation finished 🚀 Use option 3 to view logs.${NC}"
 }
 
@@ -161,7 +165,7 @@ check_ports_and_peerid() {
   done
 
   echo "--- Checking Peer ID..."
-  PEER_ID=$(docker logs aztec-sequencer 2>&1 | grep -o '"peerId":"[^"]*"' | head -n 1 | awk -F':' '{print $2}' | tr -d '"')
+  PEER_ID=$(sudo docker logs aztec-sequencer 2>&1 | grep -o '"peerId":"[^"]*"' | head -n 1 | awk -F':' '{print $2}' | tr -d '"')
   [ -n "$PEER_ID" ] && echo "✅ Peer ID: $PEER_ID" || echo "⚠️ Peer ID not found."
 }
 
@@ -171,7 +175,7 @@ check_node_performance() {
   top -b -n1 | head -n 5
   echo ""
   echo "--- Docker Stats ---"
-  docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+  sudo docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 }
 
 # ───────────────────────────────────────────────
@@ -195,8 +199,8 @@ while true; do
 
   case $choice in
     1) install_aztec_node ;;
-    2) cd ~/aztec && docker compose up -d && docker compose logs -f ;;
-    3) cd ~/aztec && docker compose logs -f ;;
+    2) cd ~/aztec && sudo docker compose up -d && sudo docker compose logs -f ;;
+    3) cd ~/aztec && sudo docker compose logs -f ;;
     4) 
        echo "--- Current .env ---"
        cat ~/aztec/.env
@@ -216,7 +220,7 @@ COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
 EOF
          echo "✅ .env updated. Restarting node..."
-         cd ~/aztec && docker compose up -d
+         cd ~/aztec && sudo docker compose up -d
        fi
        ;;
     5) check_rpc_health ;;
@@ -229,8 +233,9 @@ EOF
        if [[ "$confirm1" =~ ^[Yy]$ || -z "$confirm1" ]]; then
          read -p "➡ Are you REALLY sure? This cannot be undone. (Y/n): " confirm2
          if [[ "$confirm2" =~ ^[Yy]$ || -z "$confirm2" ]]; then
-           docker stop aztec-sequencer 2>/dev/null
-           docker rm aztec-sequencer 2>/dev/null
+           sudo docker stop aztec-sequencer 2>/dev/null
+           sudo docker rm aztec-sequencer 2>/dev/null
+           sudo docker rmi aztecprotocol/aztec:2.0.2 2>/dev/null
            rm -rf ~/aztec ~/.aztec/testnet
            echo "✅ Node deleted."
          else
@@ -241,8 +246,8 @@ EOF
        fi
        ;;
     7) check_ports_and_peerid ;;
-    8) docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && docker compose up -d) ;;
-    9) docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version ;;
+    8) sudo docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && sudo docker compose up -d) ;;
+    9) sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version ;;
     10) check_node_performance ;;
     11) echo "Exiting..."; break ;;
     *) echo "Invalid option" ;;
