@@ -220,7 +220,7 @@ COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
 EOF
          echo "✅ .env updated. Restarting node..."
-         cd ~/aztec && sudo docker compose up -d
+         cd ~/aztec && docker compose down && sudo docker compose up -d
        fi
        ;;
     5) check_rpc_health ;;
