@@ -14,6 +14,7 @@ show_header() {
   echo -e "${CYAN}==============================================================="
   echo "                     🚀 AZTEC NODE GUIDE 🚀"
   echo "               Script made by SpeedoWeb3 with ♥️"
+  echo ".             X:@SpeedoWeb3 || Discord:@SpeedoWeb3"
   echo -e "===============================================================${NC}"
 }
 
