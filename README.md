@@ -34,8 +34,8 @@ Creed’s guide)
 
 Run this command in your terminal to launch the interactive menu:
 
-``bash
-bash <(curl -fsSL https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)`` 
+
+```bash <(curl -fsSL https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)```
 
 
 
