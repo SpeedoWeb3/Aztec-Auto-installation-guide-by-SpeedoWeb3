@@ -90,7 +90,7 @@ install_aztec_node() {
   echo -e "${CYAN}Let's configure your node...${NC}"
   read -p "➡ Enter Sepolia RPC URL: " ETH_RPC
   read -p "➡ Enter Beacon RPC URL: " BEACON_RPC
-  read -p "➡ Enter Validator Private Key (0x...): " VAL_PRIV
+  read -p "➡ Enter Validator Private Key (with or without 0x...): " VAL_PRIV
   if [[ "$VAL_PRIV" != 0x* ]]; then VAL_PRIV="0x$VAL_PRIV"; fi
   read -p "➡ Enter Wallet Address (0x...): " WALLET_ADDR
   VPS_IP=$(curl -s ipv4.icanhazip.com)
@@ -163,6 +163,7 @@ launch_dozzle() {
       -v /var/run/docker.sock:/var/run/docker.sock amir20/dozzle:latest >/dev/null 2>&1
     VPS_IP=$(curl -s ipv4.icanhazip.com)
     echo "✅ Dozzle is running."
+    echo "🌐 You can view your aztec and other logs through Browser." 
     echo "👉 Open your browser: http://$VPS_IP:9999"
   fi
 }
