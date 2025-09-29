@@ -88,13 +88,46 @@ install_aztec_node() {
   rm -rf ~/aztec && mkdir ~/aztec && cd ~/aztec
 
   echo -e "${CYAN}Let's configure your node...${NC}"
-  read -p "➡ Enter Sepolia RPC URL: " ETH_RPC
-  read -p "➡ Enter Beacon RPC URL: " BEACON_RPC
-  read -p "➡ Enter Validator Private Key (with or without 0x...): " VAL_PRIV
-  if [[ "$VAL_PRIV" != 0x* ]]; then VAL_PRIV="0x$VAL_PRIV"; fi
-  read -p "➡ Enter Wallet Address (0x...): " WALLET_ADDR
-  VPS_IP=$(curl -s ipv4.icanhazip.com)
+
+# Sepolia RPC URL
+read -p "➡ Enter Sepolia RPC URL: " ETH_RPC
+if [[ -z "$ETH_RPC" ]]; then
+  echo -e "${YELLOW}⚠️ Sepolia RPC URL is required.${NC}"
+  exit 1
+fi
+
+# Beacon RPC URL
+read -p "➡ Enter Beacon RPC URL: " BEACON_RPC
+if [[ -z "$BEACON_RPC" ]]; then
+  echo -e "${YELLOW}⚠️ Beacon RPC URL is required.${NC}"
+  exit 1
+fi
+
+# Validator Private Key
+read -p "➡ Enter Validator Private Key (with or without 0x...): " VAL_PRIV
+if [[ -z "$VAL_PRIV" ]]; then
+  echo -e "${YELLOW}⚠️ Validator Private Key is required.${NC}"
+  exit 1
+fi
+if [[ "$VAL_PRIV" != 0x* ]]; then
+  VAL_PRIV="0x$VAL_PRIV"
+fi
+echo -e "${GREEN}Validator Private Key set to: $VAL_PRIV${NC}"
+
+# Wallet Address
+read -p "➡ Enter Wallet Address (0x...): " WALLET_ADDR
+if [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" != 0x* ]]; then
+  echo -e "${YELLOW}⚠️ Wallet Address must start with 0x and cannot be empty.${NC}"
+  exit 1
+fi
+
+# VPS IP detection
+VPS_IP=$(curl -s ipv4.icanhazip.com)
+if [[ -z "$VPS_IP" ]]; then
+  echo -e "${YELLOW}⚠️ Could not detect VPS IP.${NC}"
+else
   echo "➡ Auto-detected VPS IP: $VPS_IP"
+fi
 
   cat > .env <<EOF
 ETHEREUM_RPC_URL=$ETH_RPC
@@ -156,15 +189,18 @@ launch_dozzle() {
   if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
     VPS_IP=$(curl -s ipv4.icanhazip.com)
     echo "✅ Dozzle is already running."
-    echo "👉 Open your browser: http://$VPS_IP:9999"
+    echo "🌐 You can view logs for Aztec and other Docker containers using your browser."
+    echo "👉 Open: http://$VPS_IP:9999"
+    echo "🔎 In Dozzle, search for 'aztec-sequencer' to view Aztec node logs."
   else
     echo "🚀 Launching Dozzle (Docker Log Viewer)..."
     sudo docker run -d --name dozzle --restart unless-stopped -p 9999:8080 \
       -v /var/run/docker.sock:/var/run/docker.sock amir20/dozzle:latest >/dev/null 2>&1
     VPS_IP=$(curl -s ipv4.icanhazip.com)
     echo "✅ Dozzle is running."
-    echo "🌐 You can view your aztec and other logs through Browser." 
-    echo "👉 Open your browser: http://$VPS_IP:9999"
+    echo "🌐 You can view logs for Aztec and other Docker containers using your browser."
+    echo "👉 Open: http://$VPS_IP:9999"
+    echo "🔎 In Dozzle, search for 'aztec-sequencer' to view Aztec node logs."
   fi
 }
 
