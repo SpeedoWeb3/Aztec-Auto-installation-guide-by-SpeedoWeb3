@@ -534,7 +534,7 @@ EOF
     7) check_ports_and_peerid ;;
     8) sudo docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && sudo docker compose up -d) ;;
     9) sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/ind
-    10) check_node_performance ;;
+   10) check_node_performance ;;
     11) show_running_docker_containers ;;
     12) launch_dozzle ;;
     13) echo "Exiting..."; break ;;
