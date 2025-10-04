@@ -151,35 +151,63 @@ EOF
 
 # ───[ RPC HEALTH CHECK ]───
 check_rpc_health() {
-  echo "--- RPC Health Check ---"
-  echo "1) Use RPCs from .env file"
-  echo "2) Enter custom Sepolia and Beacon RPC URLs"
-  read -p "Choose option (1/2): " rpc_option
+  while true; do
+    clear
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    echo -e "${CYAN}--- RPC Health Check ---${NC}"
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${CYAN}1) Use RPCs from .env file${NC}"
+    echo -e "${CYAN}2) Enter custom Sepolia and Beacon RPC URLs${NC}"
+    echo -e "${CYAN}3) Back to Main Menu${NC}"
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    echo ""
+    read -p "$(echo -e "${CYAN}Choose option (1-3): ${NC}")" rpc_option
+    case $rpc_option in
+      1)
+        if [ -f "$HOME/aztec/.env" ]; then
+          source "$HOME/aztec/.env"
+          SEPOLIA_RPC=$ETHEREUM_RPC_URL
+          BEACON_RPC=$CONSENSUS_BEACON_URL
+        else
+          echo -e "${RED}⚠️ .env not found. Please run Full Install first.${NC}"
+          read -p "Press Enter to continue..."
+          continue
+        fi
+        ;;
+      2)
+        read -p "$(echo -e ${CYAN}➡ Enter Sepolia RPC URL: ${NC})" SEPOLIA_RPC
+        read -p "$(echo -e ${CYAN}➡ Enter Beacon RPC URL: ${NC})" BEACON_RPC
+        ;;
+      3)
+        break
+        ;;
+      *)
+        echo -e "${RED}Invalid option. Try again.${NC}"
+        sleep 1
+        continue
+        ;;
+    esac
 
-  if [ "$rpc_option" = "1" ]; then
-    if [ -f "$HOME/aztec/.env" ]; then
-      source "$HOME/aztec/.env"
-      SEPOLIA_RPC=$ETHEREUM_RPC_URL
-      BEACON_RPC=$CONSENSUS_BEACON_URL
+    echo ""
+    echo -e "${CYAN}🔎 Checking Sepolia RPC:${NC} $SEPOLIA_RPC"
+    if curl -s --max-time 5 "$SEPOLIA_RPC" >/dev/null 2>&1; then
+      echo -e "${GREEN}✅ Reachable${NC}"
     else
-      echo "⚠️ .env not found. Please run Full Install first."
-      return
+      echo -e "${RED}❌ Not reachable${NC}"
     fi
-  elif [ "$rpc_option" = "2" ]; then
-    read -p "➡ Enter Sepolia RPC URL: " SEPOLIA_RPC
-    read -p "➡ Enter Beacon RPC URL: " BEACON_RPC
-  else
-    echo "Invalid option."
-    return
-  fi
 
-  echo "🔎 Checking Sepolia RPC: $SEPOLIA_RPC"
-  curl -s --max-time 5 "$SEPOLIA_RPC" >/dev/null 2>&1 && echo "✅ Reachable" || echo "❌ Not reachable"
+    echo -e "${CYAN}🔎 Checking Beacon RPC:${NC} $BEACON_RPC"
+    if curl -s --max-time 5 "$BEACON_RPC" >/dev/null 2>&1; then
+      echo -e "${GREEN}✅ Reachable${NC}"
+    else
+      echo -e "${RED}❌ Not reachable${NC}"
+    fi
 
-  echo "🔎 Checking Beacon RPC: $BEACON_RPC"
-  curl -s --max-time 5 "$BEACON_RPC" >/dev/null 2>&1 && echo "✅ Reachable" || echo "❌ Not reachable"
+    echo ""
+    read -p "Press Enter to continue..."
+  done
 }
-
 # ───[ PORTS & PEER ID CHECK ]───
 check_ports_and_peerid() {
   echo "Checking important ports..."
@@ -286,14 +314,156 @@ check_node_performance() {
 
 # ───[ SHOW ONLY RUNNING DOCKER CONTAINERS ]───
 show_running_docker_containers() {
-  echo "🟦 Showing all running Docker containers:"
-  sudo docker ps
+  ORANGE='\033[1;33m'   # Neon yellow-orange tone
+  AMBER='\033[0;33m'    # Warm orange shade
+  WHITE='\033[1;37m'    # For light contrast
+  RESET='\033[0m'
+
   echo ""
-  RUNNING_COUNT=$(sudo docker ps | tail -n +2 | wc -l)
-  echo "Total running containers: $RUNNING_COUNT"
+  echo -e "${ORANGE}🐳  Running Docker Containers${RESET}"
+  echo -e "${AMBER}────────────────────────────────────────────${RESET}"
+  echo ""
+
+  # Ensure port checking tools exist
+  if ! command -v ss &>/dev/null && ! command -v netstat &>/dev/null; then
+    echo -e "${AMBER}Installing missing network tools (net-tools)...${RESET}"
+    sudo apt-get update -y >/dev/null 2>&1
+    sudo apt-get install -y net-tools >/dev/null 2>&1
+  fi
+
+  CONTAINERS=$(sudo docker ps -q)
+
+  if [ -z "$CONTAINERS" ]; then
+    echo -e "${AMBER}⚠️  No containers are currently running.${RESET}"
+  else
+    for ID in $CONTAINERS; do
+      NAME=$(sudo docker inspect -f '{{.Name}}' "$ID" | sed 's|/||')
+      IMAGE=$(sudo docker inspect -f '{{.Config.Image}}' "$ID")
+      STATUS=$(sudo docker inspect -f '{{.State.Status}}' "$ID")
+      NETWORK_MODE=$(sudo docker inspect -f '{{.HostConfig.NetworkMode}}' "$ID")
+      STARTED_AT=$(sudo docker inspect -f '{{.State.StartedAt}}' "$ID" | cut -d'.' -f1)
+      
+      # Calculate uptime
+      if [ -n "$STARTED_AT" ]; then
+        START_TS=$(date -d "$STARTED_AT" +%s 2>/dev/null)
+        NOW_TS=$(date +%s)
+        UPTIME_SEC=$((NOW_TS - START_TS))
+        UPTIME_FMT=$(printf '%dd %02dh %02dm %02ds' $((UPTIME_SEC/86400)) $((UPTIME_SEC%86400/3600)) $((UPTIME_SEC%3600/60)) $((UPTIME_SEC%60)))
+      else
+        UPTIME_FMT="Unknown"
+      fi
+
+      # Ports (fallback for host network, e.g. aztec-sequencer)
+      PORTS=$(sudo docker port "$ID" 2>/dev/null | paste -sd ", " -)
+      if [ "$NETWORK_MODE" = "host" ] && [ -z "$PORTS" ]; then
+        if command -v ss &>/dev/null; then
+          PORTS=$(sudo ss -tulnp 2>/dev/null | grep -E "40400|8080" | awk '{print $5}' | cut -d':' -f2 | sort -u | paste -sd ", " -)
+        elif command -v netstat &>/dev/null; then
+          PORTS=$(sudo netstat -tulnp 2>/dev/null | grep -E "40400|8080" | awk '{print $4}' | cut -d':' -f2 | sort -u | paste -sd ", " -)
+        fi
+      fi
+
+      echo -e "${WHITE}Docker Name${AMBER}  :${RESET} ${ORANGE}$NAME${RESET}"
+      echo -e "${WHITE}Image${AMBER}        :${RESET} ${ORANGE}$IMAGE${RESET}"
+      echo -e "${WHITE}Status${AMBER}       :${RESET} ${ORANGE}${STATUS^}${RESET}"
+      echo -e "${WHITE}Network${AMBER}      :${RESET} ${ORANGE}$NETWORK_MODE${RESET}"
+      echo -e "${WHITE}Uptime${AMBER}       :${RESET} ${ORANGE}$UPTIME_FMT${RESET}"
+
+      if [ -n "$PORTS" ]; then
+        echo -e "${WHITE}Ports${AMBER}        :${RESET} ${ORANGE}$PORTS${RESET}"
+      else
+        echo -e "${WHITE}Ports${AMBER}        :${RESET} None"
+      fi
+
+      echo -e "${AMBER}────────────────────────────────────────────${RESET}"
+    done
+
+    COUNT=$(echo "$CONTAINERS" | wc -w)
+    echo ""
+    echo -e "📦 ${WHITE}Total running containers${AMBER}:${RESET} ${ORANGE}$COUNT${RESET}"
+  fi
+
   echo ""
 }
+# ───[ DOZZLE MANAGER: INSTALL / SHOW / DELETE ]───
+launch_dozzle() {
+  while true; do
+    clear
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    echo -e "${CYAN}🪩 DOZZLE (Docker Log Viewer) MANAGER${NC}"
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    echo ""
+    echo -e "${CYAN}1) Install Dozzle${NC}"
+    echo -e "${CYAN}2) Show Existing Dozzle${NC}"
+    echo -e "${CYAN}3) Delete Dozzle${NC}"
+    echo -e "${CYAN}4) Back to Main Menu${NC}"
+    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+    read -p "Choose an option (1-4): " dozzle_choice
 
+    case $dozzle_choice in
+      1)
+        echo "🚀 Installing & Launching Dozzle..."
+        sudo docker pull amir20/dozzle:latest >/dev/null 2>&1
+
+        # Stop old Dozzle container if running
+        if sudo docker ps -a --format '{{.Names}}' | grep -q '^dozzle$'; then
+          echo "⚙️ Removing old Dozzle container..."
+          sudo docker stop dozzle >/dev/null 2>&1
+          sudo docker rm dozzle >/dev/null 2>&1
+        fi
+
+        # Run new container
+        sudo docker run -d --name dozzle --restart unless-stopped \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -p 9999:8080 amir20/dozzle:latest >/dev/null 2>&1
+
+        # Firewall rules
+        sudo ufw allow 9999 >/dev/null 2>&1
+        sudo ufw reload >/dev/null 2>&1
+
+        VPS_IP=$(curl -s ipv4.icanhazip.com)
+        echo "✅ Dozzle installed & running!"
+        echo "🌐 Open in browser: http://$VPS_IP:9999"
+        echo "🔎 Search 'aztec-sequencer' to view node logs."
+        read -p "Press Enter to continue..."
+        ;;
+
+      2)
+        echo "🔎 Checking Dozzle status..."
+        if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
+          VPS_IP=$(curl -s ipv4.icanhazip.com)
+          echo "✅ Dozzle is running!"
+          echo "🌐 Access it at: http://$VPS_IP:9999"
+          echo "🔎 Search 'aztec-sequencer' inside Dozzle to view logs."
+        else
+          echo "❌ Dozzle is not running."
+        fi
+        read -p "Press Enter to continue..."
+        ;;
+
+      3)
+        echo "⚠️ This will delete the Dozzle container completely."
+        read -p "Are you sure? (Y/n): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ || -z "$confirm" ]]; then
+          sudo docker stop dozzle >/dev/null 2>&1
+          sudo docker rm dozzle >/dev/null 2>&1
+          echo "✅ Dozzle container deleted."
+        else
+          echo "❌ Cancelled."
+        fi
+        read -p "Press Enter to continue..."
+        ;;
+
+      4)
+        break
+        ;;
+      *)
+        echo "Invalid choice. Try again."
+        sleep 1
+        ;;
+    esac
+  done
+}
 # ──────────────[ MAIN MENU ]──────────────
 while true; do
   show_header
@@ -308,7 +478,8 @@ while true; do
   echo -e "${CYAN}9) Check Node Version${NC}"
   echo -e "${CYAN}10) Check Node Performance${NC}"
   echo -e "${CYAN}11) Show Running Docker Containers${NC}"
-  echo -e "${CYAN}12) Exit${NC}"
+  echo -e "${CYAN}12) Launch Dozzle (View Logs in Browser)${NC}"
+  echo -e "${CYAN}13) Exit${NC}"
   echo ""
   read -p "Choose option (1-12): " choice
 
@@ -362,11 +533,11 @@ EOF
       ;;
     7) check_ports_and_peerid ;;
     8) sudo docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && sudo docker compose up -d) ;;
-    9) sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version ;;
+    9) sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/ind
     10) check_node_performance ;;
     11) show_running_docker_containers ;;
-    12) echo "Exiting..."; break ;;
-    *) echo "Invalid option" ;;
+    12) launch_dozzle ;;
+    13) echo "Exiting..."; break ;;
   esac
 
   read -p "Press Enter to continue..."
