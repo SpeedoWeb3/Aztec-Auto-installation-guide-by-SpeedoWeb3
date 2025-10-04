@@ -538,6 +538,7 @@ EOF
     11) show_running_docker_containers ;;
     12) launch_dozzle ;;
     13) echo "Exiting..."; break ;;
+    *) echo "Invalid choice. Try again." ;;
   esac
 
   read -p "Press Enter to continue..."
