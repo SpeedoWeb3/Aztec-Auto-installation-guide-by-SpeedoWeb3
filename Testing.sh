@@ -792,9 +792,26 @@ while true; do
       ;;
     3) cd ~/aztec && sudo docker compose logs -f ;;
     4)
-      echo "--- Current .env ---"
-      cat ~/aztec/.env 2>/dev/null || echo ".env file not found!"
+      echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+      echo -e "${AMBER}           📝 ENV CONFIGURATION${NC}"
+      echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
       echo ""
+      echo -e "${CYAN}--- Current .env ---${NC}"
+      if [ -f ~/aztec/.env ]; then
+        cat ~/aztec/.env | while IFS= read -r line; do
+          if [[ $line == *"VALIDATOR_PRIVATE_KEYS"* ]]; then
+            KEY_VAL=$(echo "$line" | cut -d'=' -f2)
+            MASKED_KEY="${KEY_VAL:0:10}...${KEY_VAL: -4}"
+            echo -e "${WHITE}VALIDATOR_PRIVATE_KEYS=${AMBER}$MASKED_KEY${NC}"
+          else
+            echo -e "${WHITE}$line${NC}"
+          fi
+        done
+      else
+        echo -e "${RED}.env file not found!${NC}"
+      fi
+      echo ""
+      echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
       read -p "➡ Do you want to edit values? (Y/n): " edit_choice
       if [[ "$edit_choice" =~ ^[Yy]$ || -z "$edit_choice" ]]; then
         read -p "➡ Enter new Sepolia RPC URL: " ETH_RPC
@@ -825,7 +842,7 @@ VALIDATOR_PRIVATE_KEYS=$VAL_PRIV
 COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
 EOF
-        echo "✅ .env updated. Restarting node..."
+        echo -e "${GREEN}✅ .env updated. Restarting node...${NC}"
         cd ~/aztec && sudo docker compose down && sudo docker compose up -d
       fi
       read -p "Press Enter to continue..."
@@ -834,28 +851,40 @@ EOF
       check_rpc_health 
       ;;
     6)
-      echo -e "${RED}⚠️ This will delete your Aztec Node:${NC}"
-      echo "   - ~/aztec"
-      echo "   - ~/.aztec/testnet"
-      echo "   - Docker container: aztec-sequencer"
+      echo ""
+      echo -e "${RED}═══════════════════════════════════════════════${NC}"
+      echo -e "${RED}              ⚠️  DELETE NODE WARNING${NC}"
+      echo -e "${RED}═══════════════════════════════════════════════${NC}"
+      echo ""
+      echo -e "${YELLOW}This will permanently delete:${NC}"
+      echo -e "  ${WHITE}•${NC} ~/aztec directory"
+      echo -e "  ${WHITE}•${NC} ~/.aztec/testnet data"
+      echo -e "  ${WHITE}•${NC} Docker container: aztec-sequencer"
+      echo -e "  ${WHITE}•${NC} Docker images: aztecprotocol/aztec"
+      echo ""
       read -p "➡ Are you sure? (Y/n): " confirm1
       if [[ "$confirm1" =~ ^[Yy]$ || -z "$confirm1" ]]; then
         read -p "➡ Are you REALLY sure? This cannot be undone. (Y/n): " confirm2
         if [[ "$confirm2" =~ ^[Yy]$ || -z "$confirm2" ]]; then
+          echo -e "${CYAN}Stopping and removing containers...${NC}"
           sudo docker stop aztec-sequencer 2>/dev/null
           sudo docker rm aztec-sequencer 2>/dev/null
-          # Delete all aztec images regardless of version
+          
+          echo -e "${CYAN}Removing Docker images...${NC}"
           AZTEC_IMAGES=$(sudo docker images aztecprotocol/aztec -q 2>/dev/null)
           if [ -n "$AZTEC_IMAGES" ]; then
             sudo docker rmi -f $AZTEC_IMAGES 2>/dev/null
           fi
+          
+          echo -e "${CYAN}Removing directories...${NC}"
           rm -rf ~/aztec ~/.aztec/testnet
-          echo "✅ Node deleted."
+          
+          echo -e "${GREEN}✅ Node deleted successfully.${NC}"
         else
-          echo "❌ Second confirmation failed. Cancelled."
+          echo -e "${YELLOW}❌ Second confirmation failed. Cancelled.${NC}"
         fi
       else
-        echo "❌ Delete cancelled."
+        echo -e "${YELLOW}❌ Delete cancelled.${NC}"
       fi
       read -p "Press Enter to continue..."
       ;;
@@ -864,7 +893,31 @@ EOF
       read -p "Press Enter to continue..."
       ;;
     8) 
-      echo -e "${CYAN}Updating Aztec node from 2.0.2 to 2.0.3...${NC}"
+      echo ""
+      echo -e "${CYAN}═══════════════════════════════════════════════${NC}"
+      echo -e "${CYAN}           📦 NODE UPDATE MANAGER${NC}"
+      echo -e "${CYAN}═══════════════════════════════════════════════${NC}"
+      echo ""
+      
+      # Check current version first
+      if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
+        CURRENT_VERSION=$(sudo docker inspect aztec-sequencer --format='{{.Config.Image}}' 2>/dev/null | cut -d: -f2)
+        echo -e "${AMBER}Current version: ${WHITE}$CURRENT_VERSION${NC}"
+      else
+        echo -e "${YELLOW}⚠️ Node is not running${NC}"
+      fi
+      
+      echo -e "${AMBER}Target version: ${WHITE}2.0.3${NC}"
+      echo ""
+      
+      read -p "Do you want to update? (Y/n): " update_confirm
+      if [[ ! "$update_confirm" =~ ^[Yy]$ && -n "$update_confirm" ]]; then
+        echo -e "${YELLOW}❌ Update cancelled.${NC}"
+        read -p "Press Enter to continue..."
+        continue
+      fi
+      
+      echo -e "${CYAN}Updating Aztec node to version 2.0.3...${NC}"
       
       # Navigate to aztec directory
       [ "${PWD##*/}" != "aztec" ] && cd ~/aztec
@@ -874,15 +927,18 @@ EOF
       bash <(curl -Ls https://raw.githubusercontent.com/DeepPatel2412/Aztec-Tools/refs/heads/main/Aztec%20CLI%20Cleanup)
       
       # Update docker-compose.yml to version 2.0.3
-      echo "Updating docker-compose.yml to version 2.0.3..."
+      echo "Updating docker-compose.yml..."
       sed -i 's|^ *image: aztecprotocol/aztec:.*|    image: aztecprotocol/aztec:2.0.3|' docker-compose.yml
       sed -i 's|alpha-testnet|testnet|g' docker-compose.yml
       
       # Restart container with new version
-      echo "Restarting node with version 2.0.3..."
+      echo "Restarting node with new version..."
       sudo docker compose up -d
       
-      echo -e "${GREEN}✅ Node successfully updated to version 2.0.3${NC}"
+      echo ""
+      echo -e "${GREEN}╔═══════════════════════════════════════════╗${NC}"
+      echo -e "${GREEN}║   ✅ Node successfully updated to 2.0.3!   ║${NC}"
+      echo -e "${GREEN}╚═══════════════════════════════════════════╝${NC}"
       read -p "Press Enter to continue..."
       ;;
     9) 
@@ -901,7 +957,12 @@ EOF
       launch_dozzle 
       ;;
     13) 
-      echo -e "${GREEN}Goodbye! Thanks for using Aztec Node Guide 👋${NC}"
+      echo ""
+      echo -e "${GREEN}═══════════════════════════════════════════════${NC}"
+      echo -e "${GREEN}     Thank you for using Aztec Node Guide!${NC}"
+      echo -e "${GREEN}           Made with ♥️ by SpeedoWeb3${NC}"
+      echo -e "${GREEN}═══════════════════════════════════════════════${NC}"
+      echo ""
       exit 0 
       ;;
     *) 
