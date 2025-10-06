@@ -581,201 +581,169 @@ show_running_docker_containers() {
         fi
       fi
 
-      # ───[ SIMPLIFIED DOZZLE MANAGER ]───
+# ───[ SIMPLIFIED DOZZLE MANAGER ]───
+
 launch_dozzle() {
-  while true; do
-    clear
-    echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-    echo -e "${AMBER}     🪩 DOZZLE LOG VIEWER CONTROL CENTER${NC}"
-    echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-    echo ""
-    echo -e "${AMBER}1) 🚀 Install Dozzle${NC}"
-    echo -e "${AMBER}2) 👀 View Dozzle Status & Access${NC}"
-    echo -e "${AMBER}3) 🗑️  Remove Dozzle${NC}"
-    echo -e "${AMBER}4) ↩️  Back to Main Menu${NC}"
-    echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-    read -p "Choose an option (1-4): " dozzle_choice
-
-    case $dozzle_choice in
-      1)
-        echo ""
-        # Check if already installed
-        if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
-          echo -e "${GREEN}✅ Dozzle is already installed and running!${NC}"
-          echo ""
-          VPS_IP=$(curl -s ipv4.icanhazip.com)
-          
-          DOZZLE_STATUS=$(sudo docker ps --filter "name=dozzle" --format "table {{.Status}}" | tail -n 1)
-          DOZZLE_IMAGE=$(sudo docker inspect dozzle --format='{{.Config.Image}}' 2>/dev/null)
-          
-          echo -e "${CYAN}📦 Image: ${WHITE}$DOZZLE_IMAGE${NC}"
-          echo -e "${CYAN}⏱️ Uptime: ${WHITE}$DOZZLE_STATUS${NC}"
-          echo ""
-          echo -e "${CYAN}🌐 Access URL: ${WHITE}http://$VPS_IP:9999${NC}"
-          echo ""
-          echo -e "${AMBER}📝 Quick Guide:${NC}"
-          echo -e "  1️⃣  Open the URL in your browser"
-          echo -e "  2️⃣  Search for '${WHITE}aztec-sequencer${NC}' in the container list"
-          echo -e "  3️⃣  Click to view real-time logs"
-          echo -e "  4️⃣  Use filters to search specific events"
-          echo ""
-          echo -e "${CYAN}💡 Pro Tips:${NC}"
-          echo -e "  • Use ${WHITE}Ctrl+F${NC} to search within logs"
-          echo -e "  • Click the ${WHITE}⚙️ gear icon${NC} for settings"
-          echo -e "  • Enable ${WHITE}dark mode${NC} for better visibility"
-          echo ""
-        else
-          echo -e "${CYAN}🚀 Installing Dozzle for the first time...${NC}"
-          echo -e "${CYAN}This will give you a beautiful web interface to view logs!${NC}"
-          
-          # Pull and run Dozzle
-          sudo docker pull amir20/dozzle:latest >/dev/null 2>&1
-          sudo docker run -d --name dozzle --restart unless-stopped \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -p 9999:8080 amir20/dozzle:latest >/dev/null 2>&1
-          
-          # Firewall rules
-          sudo ufw allow 9999 >/dev/null 2>&1
-          sudo ufw reload >/dev/null 2>&1
-          
-          VPS_IP=$(curl -s ipv4.icanhazip.com)
-          echo ""
-          echo -e "${GREEN}╔═══════════════════════════════════════════╗${NC}"
-          echo -e "${GREEN}║     ✨ DOZZLE SUCCESSFULLY DEPLOYED! ✨    ║${NC}"
-          echo -e "${GREEN}╚═══════════════════════════════════════════╝${NC}"
-          echo ""
-          echo -e "${CYAN}🌐 Access URL: ${WHITE}http://$VPS_IP:9999${NC}"
-          echo ""
-          echo -e "${AMBER}📝 Quick Guide:${NC}"
-          echo -e "  1️⃣  Open the URL in your browser"
-          echo -e "  2️⃣  Search for '${WHITE}aztec-sequencer${NC}' in the container list"
-          echo -e "  3️⃣  Click to view real-time logs"
-          echo -e "  4️⃣  Use filters to search specific events"
-          echo ""
-          echo -e "${CYAN}💡 Pro Tips:${NC}"
-          echo -e "  • Use ${WHITE}Ctrl+F${NC} to search within logs"
-          echo -e "  • Click the ${WHITE}⚙️ gear icon${NC} for settings"
-          echo -e "  • Enable ${WHITE}dark mode${NC} for better visibility"
-          echo ""
-        else
-          echo -e "${CYAN}🚀 Installing Dozzle for the first time...${NC}"
-          echo -e "${CYAN}This will give you a beautiful web interface to view logs!${NC}"
-          
-          # Pull and run Dozzle
-          sudo docker pull amir20/dozzle:latest >/dev/null 2>&1
-          sudo docker run -d --name dozzle --restart unless-stopped \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -p 9999:8080 amir20/dozzle:latest >/dev/null 2>&1
-          
-          # Firewall rules
-          sudo ufw allow 9999 >/dev/null 2>&1
-          sudo ufw reload >/dev/null 2>&1
-          
-          VPS_IP=$(curl -s ipv4.icanhazip.com)
-          echo ""
-          echo -e "${GREEN}╔═══════════════════════════════════════════╗${NC}"
-          echo -e "${GREEN}║     ✨ DOZZLE SUCCESSFULLY DEPLOYED! ✨    ║${NC}"
-          echo -e "${GREEN}╚═══════════════════════════════════════════╝${NC}"
-          echo ""
-          echo -e "${CYAN}🌐 Access URL: ${WHITE}http://$VPS_IP:9999${NC}"
-          echo ""
-          echo -e "${AMBER}📝 Quick Guide:${NC}"
-          echo -e "  1️⃣  Open the URL in your browser"
-          echo -e "  2️⃣  Search for '${WHITE}aztec-sequencer${NC}' in the container list"
-          echo -e "  3️⃣  Click to view real-time logs"
-          echo -e "  4️⃣  Use filters to search specific events"
-          echo ""
-          echo -e "${CYAN}💡 Pro Tips:${NC}"
-          echo -e "  • Use ${WHITE}Ctrl+F${NC} to search within logs"
-          echo -e "  • Click the ${WHITE}⚙️ gear icon${NC} for settings"
-          echo -e "  • Enable ${WHITE}dark mode${NC} for better visibility"
-          echo ""
-        fi
-        read -p "Press Enter to continue..."
-        ;;
-
-      2)
-        echo ""
+    while true; do
+        clear
         echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-        echo -e "${AMBER}          📊 DOZZLE STATUS REPORT${NC}"
+        echo -e "${AMBER}     🪩 DOZZLE LOG VIEWER CONTROL CENTER${NC}"
         echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
         echo ""
+        echo -e "${AMBER}1) 🚀 Install Dozzle${NC}"
+        echo -e "${AMBER}2) 👀 View Dozzle Status & Access${NC}"
+        echo -e "${AMBER}3) 🗑️  Remove Dozzle${NC}"
+        echo -e "${AMBER}4) ↩️  Back to Main Menu${NC}"
+        echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+        read -p "Choose an option (1-4): " dozzle_choice
+
+        case $dozzle_choice in
+        1)
+            echo ""
+            # Check if already installed
+            if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
+                echo -e "${GREEN}✅ Dozzle is already installed and running!${NC}"
+                echo ""
+                VPS_IP=$(curl -s ipv4.icanhazip.com)
+                
+                DOZZLE_STATUS=$(sudo docker ps --filter "name=dozzle" --format "table {{.Status}}" | tail -n 1)
+                DOZZLE_IMAGE=$(sudo docker inspect dozzle --format='{{.Config.Image}}' 2>/dev/null)
+                
+                echo -e "${CYAN}📦 Image: ${WHITE}$DOZZLE_IMAGE${NC}"
+                echo -e "${CYAN}⏱️ Uptime: ${WHITE}$DOZZLE_STATUS${NC}"
+                echo ""
+                echo -e "${CYAN}🌐 Access URL: ${WHITE}http://$VPS_IP:9999${NC}"
+                echo ""
+                echo -e "${AMBER}📝 Quick Guide:${NC}"
+                echo -e "  1️⃣  Open the URL in your browser"
+                echo -e "  2️⃣  Search for '${WHITE}aztec-sequencer${NC}' in the container list"
+                echo -e "  3️⃣  Click to view real-time logs"
+                echo -e "  4️⃣  Use filters to search specific events"
+                echo ""
+                echo -e "${CYAN}💡 Pro Tips:${NC}"
+                echo -e "  • Use ${WHITE}Ctrl+F${NC} to search within logs"
+                echo -e "  • Click the ${WHITE}⚙️ gear icon${NC} for settings"
+                echo -e "  • Enable ${WHITE}dark mode${NC} for better visibility"
+                echo ""
+            else
+                echo -e "${CYAN}🚀 Installing Dozzle for the first time...${NC}"
+                echo -e "${CYAN}This will give you a beautiful web interface to view logs!${NC}"
+                
+                # Pull and run Dozzle
+                sudo docker pull amir20/dozzle:latest >/dev/null 2>&1
+                sudo docker run -d --name dozzle --restart unless-stopped \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -p 9999:8080 amir20/dozzle:latest >/dev/null 2>&1
+                
+                # Firewall rules
+                sudo ufw allow 9999 >/dev/null 2>&1
+                sudo ufw reload >/dev/null 2>&1
+                
+                VPS_IP=$(curl -s ipv4.icanhazip.com)
+                echo ""
+                echo -e "${GREEN}╔═══════════════════════════════════════════╗${NC}"
+                echo -e "${GREEN}║     ✨ DOZZLE SUCCESSFULLY DEPLOYED! ✨    ║${NC}"
+                echo -e "${GREEN}╚═══════════════════════════════════════════╝${NC}"
+                echo ""
+                echo -e "${CYAN}🌐 Access URL: ${WHITE}http://$VPS_IP:9999${NC}"
+                echo ""
+                echo -e "${AMBER}📝 Quick Guide:${NC}"
+                echo -e "  1️⃣  Open the URL in your browser"
+                echo -e "  2️⃣  Search for '${WHITE}aztec-sequencer${NC}' in the container list"
+                echo -e "  3️⃣  Click to view real-time logs"
+                echo -e "  4️⃣  Use filters to search specific events"
+                echo ""
+                echo -e "${CYAN}💡 Pro Tips:${NC}"
+                echo -e "  • Use ${WHITE}Ctrl+F${NC} to search within logs"
+                echo -e "  • Click the ${WHITE}⚙️ gear icon${NC} for settings"
+                echo -e "  • Enable ${WHITE}dark mode${NC} for better visibility"
+                echo ""
+            fi
+            read -p "Press Enter to continue..."
+            ;;
+
+        2)
+            echo ""
+            echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+            echo -e "${AMBER}          📊 DOZZLE STATUS REPORT${NC}"
+            echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+            echo ""
+            
+            if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
+                VPS_IP=$(curl -s ipv4.icanhazip.com)
+                
+                # Get container details
+                DOZZLE_STATUS=$(sudo docker ps --filter "name=dozzle" --format "table {{.Status}}" | tail -n 1)
+                DOZZLE_IMAGE=$(sudo docker inspect dozzle --format='{{.Config.Image}}' 2>/dev/null)
+                
+                echo -e "${GREEN}✅ Status: RUNNING${NC}"
+                echo -e "${CYAN}📦 Image: ${WHITE}$DOZZLE_IMAGE${NC}"
+                echo -e "${CYAN}⏱️ Uptime: ${WHITE}$DOZZLE_STATUS${NC}"
+                echo ""
+                echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+                echo ""
+                echo -e "${CYAN}🌟 Your Dozzle Dashboard is Ready!${NC}"
+                echo ""
+                echo -e "  🔗 ${WHITE}Access Link:${NC} ${GREEN}http://$VPS_IP:9999${NC}"
+                echo ""
+                echo -e "${AMBER}📖 How to Use Dozzle:${NC}"
+                echo ""
+                echo -e "  ${CYAN}Step 1:${NC} Open the link above in your browser"
+                echo -e "  ${CYAN}Step 2:${NC} You'll see all running containers"
+                echo -e "  ${CYAN}Step 3:${NC} Click on '${WHITE}aztec-sequencer${NC}' container"
+                echo -e "  ${CYAN}Step 4:${NC} Watch your node logs in real-time! 🎯"
+                echo ""
+                echo -e "${YELLOW}🎨 Fun Features to Try:${NC}"
+                echo -e "  • ${WHITE}Split View:${NC} Compare logs from multiple containers"
+                echo -e "  • ${WHITE}Filters:${NC} Search for errors, warnings, or specific events"
+                echo -e "  • ${WHITE}Download:${NC} Export logs for offline analysis"
+                echo -e "  • ${WHITE}Stats:${NC} View container resource usage"
+                echo ""
+                echo -e "${GREEN}💝 Enjoy your beautiful log viewer!${NC}"
+            else
+                echo -e "${RED}❌ Status: NOT RUNNING${NC}"
+                echo ""
+                echo -e "${YELLOW}Dozzle is not currently installed or running.${NC}"
+                echo -e "${CYAN}Select option 1 to install it.${NC}"
+            fi
+            echo ""
+            echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
+            read -p "Press Enter to continue..."
+            ;;
+
+        3)
+            echo ""
+            if sudo docker ps -a --format '{{.Names}}' | grep -q '^dozzle$'; then
+                echo -e "${YELLOW}⚠️  Warning: This will remove Dozzle log viewer${NC}"
+                echo -e "${CYAN}Your Aztec node will continue running normally.${NC}"
+                echo ""
+                read -p "Are you sure you want to remove Dozzle? (Y/n): " confirm
+                if [[ "$confirm" =~ ^[Yy]$ || -z "$confirm" ]]; then
+                    echo -e "${CYAN}Removing Dozzle...${NC}"
+                    sudo docker stop dozzle >/dev/null 2>&1
+                    sudo docker rm dozzle >/dev/null 2>&1
+                    sudo docker rmi amir20/dozzle:latest >/dev/null 2>&1
+                    echo -e "${GREEN}✅ Dozzle has been removed successfully${NC}"
+                    echo -e "${CYAN}You can reinstall it anytime from option 1${NC}"
+                else
+                    echo -e "${GREEN}✅ Cancelled - Dozzle remains installed${NC}"
+                fi
+            else
+                echo -e "${YELLOW}Dozzle is not installed${NC}"
+            fi
+            read -p "Press Enter to continue..."
+            ;;
+
+        4)
+            break
+            ;;
         
-        if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
-          VPS_IP=$(curl -s ipv4.icanhazip.com)
-          
-          # Get container details
-          DOZZLE_STATUS=$(sudo docker ps --filter "name=dozzle" --format "table {{.Status}}" | tail -n 1)
-          DOZZLE_IMAGE=$(sudo docker inspect dozzle --format='{{.Config.Image}}' 2>/dev/null)
-          
-          echo -e "${GREEN}✅ Status: RUNNING${NC}"
-          echo -e "${CYAN}📦 Image: ${WHITE}$DOZZLE_IMAGE${NC}"
-          echo -e "${CYAN}⏱️ Uptime: ${WHITE}$DOZZLE_STATUS${NC}"
-          echo ""
-          echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-          echo ""
-          echo -e "${CYAN}🌟 Your Dozzle Dashboard is Ready!${NC}"
-          echo ""
-          echo -e "  🔗 ${WHITE}Access Link:${NC} ${GREEN}http://$VPS_IP:9999${NC}"
-          echo ""
-          echo -e "${AMBER}📖 How to Use Dozzle:${NC}"
-          echo ""
-          echo -e "  ${CYAN}Step 1:${NC} Open the link above in your browser"
-          echo -e "  ${CYAN}Step 2:${NC} You'll see all running containers"
-          echo -e "  ${CYAN}Step 3:${NC} Click on '${WHITE}aztec-sequencer${NC}' container"
-          echo -e "  ${CYAN}Step 4:${NC} Watch your node logs in real-time! 🎯"
-          echo ""
-          echo -e "${YELLOW}🎨 Fun Features to Try:${NC}"
-          echo -e "  • ${WHITE}Split View:${NC} Compare logs from multiple containers"
-          echo -e "  • ${WHITE}Filters:${NC} Search for errors, warnings, or specific events"
-          echo -e "  • ${WHITE}Download:${NC} Export logs for offline analysis"
-          echo -e "  • ${WHITE}Stats:${NC} View container resource usage"
-          echo ""
-          echo -e "${GREEN}💝 Enjoy your beautiful log viewer!${NC}"
-        else
-          echo -e "${RED}❌ Status: NOT RUNNING${NC}"
-          echo ""
-          echo -e "${YELLOW}Dozzle is not currently installed or running.${NC}"
-          echo -e "${CYAN}Select option 1 to install it.${NC}"
-        fi
-        echo ""
-        echo -e "${AMBER}═══════════════════════════════════════════════${NC}"
-        read -p "Press Enter to continue..."
-        ;;
-
-      3)
-        echo ""
-        if sudo docker ps -a --format '{{.Names}}' | grep -q '^dozzle$'; then
-          echo -e "${YELLOW}⚠️  Warning: This will remove Dozzle log viewer${NC}"
-          echo -e "${CYAN}Your Aztec node will continue running normally.${NC}"
-          echo ""
-          read -p "Are you sure you want to remove Dozzle? (Y/n): " confirm
-          if [[ "$confirm" =~ ^[Yy]$ || -z "$confirm" ]]; then
-            echo -e "${CYAN}Removing Dozzle...${NC}"
-            sudo docker stop dozzle >/dev/null 2>&1
-            sudo docker rm dozzle >/dev/null 2>&1
-            sudo docker rmi amir20/dozzle:latest >/dev/null 2>&1
-            echo -e "${GREEN}✅ Dozzle has been removed successfully${NC}"
-            echo -e "${CYAN}You can reinstall it anytime from option 1${NC}"
-          else
-            echo -e "${GREEN}✅ Cancelled - Dozzle remains installed${NC}"
-          fi
-        else
-          echo -e "${YELLOW}Dozzle is not installed${NC}"
-        fi
-        read -p "Press Enter to continue..."
-        ;;
-
-      4)
-        break
-        ;;
-        
-      *)
-        echo -e "${RED}Invalid choice. Please try again.${NC}"
-        sleep 1
-        ;;
-    esac
-  done
+        *)
+            echo -e "${RED}Invalid choice. Please try again.${NC}"
+            sleep 1
+            ;;
+        esac
+    done
 }
 
 # ───[ CHECK NODE VERSION ]───
