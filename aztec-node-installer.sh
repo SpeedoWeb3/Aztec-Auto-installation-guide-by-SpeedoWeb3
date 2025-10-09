@@ -229,20 +229,14 @@ EOF
   sudo docker compose -f ~/aztec/docker-compose.yml up -d
   
   echo ""
-  echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
-  echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
-  echo ""
-  echo -e "${CYAN}📝 Important Notes:${NC}"
-  echo "   • RPC and other Docker containers were NOT touched"
-  echo "   • Log out and log back in for Docker permissions"
-  echo "   • Or run: ${YELLOW}newgrp docker${NC}"
-  echo ""
-  echo -e "${CYAN}📊 Next Steps:${NC}"
-  echo "   • Use option 3 to view logs"
-  echo "   • Use option 7 to check ports & peer ID"
-  echo ""
-}
+echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
+echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${CYAN}📊 Next Steps:${NC}"
+echo "   • Use option 2 to view logs"
+echo "   • Use option 6 to check ports & peer ID"
+echo ""
 
 # ───[ RPC HEALTH CHECK ]───
 check_rpc_health() {
