@@ -229,14 +229,15 @@ EOF
   sudo docker compose -f ~/aztec/docker-compose.yml up -d
   
   echo ""
-echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
+  echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${CYAN}📊 Next Steps:${NC}"
 echo "   • Use option 2 to view logs"
-echo "   • Use option 6 to check ports & peer ID"
+echo "   • Use option 7 to check ports & peer ID"
 echo ""
+}
 
 # ───[ RPC HEALTH CHECK ]───
 check_rpc_health() {
@@ -553,7 +554,7 @@ EOF
       echo -e "${GREEN}✅ Node updated and restarted!${NC}"
       ;;
       
-    8) 
+   8) 
       echo -e "${CYAN}Checking Aztec Node Version...${NC}"
       if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
         sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
