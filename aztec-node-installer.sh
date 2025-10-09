@@ -1,11 +1,15 @@
 #!/bin/bash
-set -u   # safer: exit on unset vars only
+set -u   # Exit on undefined variables
 
 # ──────────────[ COLORS ]──────────────
 CYAN='\033[0;36m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
+AMBER='\033[0;33m'
+WHITE='\033[1;37m'
+BLUE='\033[0;34m'
+ORANGE='\033[1;33m'
 NC='\033[0m'
 
 # ──────────────[ HEADER ]──────────────
@@ -26,88 +30,164 @@ install_aztec_node() {
   sudo sh -c 'echo "• Root Access Enabled ✔"'
 
   # Step 2: Update system
+  echo -e "${CYAN}Updating system...${NC}"
   sudo apt-get update && sudo apt-get upgrade -y
 
-  # Step 3: Install prerequisites (includes sysstat and ifstat for network stats)
+  # Step 3: Install prerequisites
+  echo -e "${CYAN}Installing prerequisites...${NC}"
   sudo apt install -y curl iptables build-essential git wget lz4 jq make gcc nano \
     automake autoconf tmux htop nvme-cli libgbm1 pkg-config libssl-dev libleveldb-dev \
     tar clang bsdmainutils ncdu unzip ufw screen gawk netcat-openbsd sysstat ifstat
+  echo -e "${GREEN}✅ Prerequisites installed${NC}"
 
-  # Step 4: Docker setup (safe cleanup only for Aztec)
+  # Step 4: Docker check (SAFE - doesn't reinstall)
   if [ ! -f /etc/os-release ]; then
     echo "Not Ubuntu or Debian"
     exit 1
   fi
 
-  echo -e "${CYAN}Checking for existing Aztec Docker containers/images...${NC}"
-  AZTEC_CONTAINERS=$(sudo docker ps -a --filter ancestor=aztecprotocol/aztec --format "{{.ID}}")
-  AZTEC_NAMED_CONTAINERS=$(sudo docker ps -a --filter "name=aztec" --format "{{.ID}}")
-  AZTEC_IMAGES=$(sudo docker images aztecprotocol/aztec -q)
-
-  if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_NAMED_CONTAINERS" ] || [ -n "$AZTEC_IMAGES" ]; then
-    echo -e "${RED}⚠️ Existing Aztec Docker setup detected!${NC}"
-    echo "Containers: ${AZTEC_CONTAINERS:-None} ${AZTEC_NAMED_CONTAINERS:-None}"
-    echo "Images: ${AZTEC_IMAGES:-None}"
-    read -p "➡ Do you want to delete and reinstall Aztec only? (Y/n): " del_choice
-    if [[ ! "$del_choice" =~ ^[Yy]$ && -n "$del_choice" ]]; then
-      echo "❌ Installation cancelled."
-      return
+  # Check if Docker is installed
+  if ! command -v docker &> /dev/null; then
+    # Docker NOT installed - install it
+    echo -e "${CYAN}Docker not found. Installing Docker...${NC}"
+    
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl gnupg lsb-release
+    sudo install -m 0755 -d /etc/apt/keyrings
+    . /etc/os-release
+    repo_url="https://download.docker.com/linux/$ID"
+    curl -fsSL "$repo_url/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] $repo_url $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt update -y && sudo apt upgrade -y
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    
+    # Test Docker installation
+    if sudo docker run hello-world &>/dev/null; then
+      sudo docker rm $(sudo docker ps -a --filter "ancestor=hello-world" --format "{{.ID}}") --force 2>/dev/null || true
+      sudo docker image rm hello-world 2>/dev/null || true
     fi
-    # Stop and remove all containers found
-    if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_NAMED_CONTAINERS" ]; then
-      echo "Stopping and removing Aztec containers..."
-      sudo docker stop $AZTEC_CONTAINERS $AZTEC_NAMED_CONTAINERS 2>/dev/null
-      sudo docker rm $AZTEC_CONTAINERS $AZTEC_NAMED_CONTAINERS 2>/dev/null
-    fi
-    # Remove Aztec images (force)
-    if [ -n "$AZTEC_IMAGES" ]; then
-      echo "Removing Aztec images..."
-      sudo docker rmi -f $AZTEC_IMAGES 2>/dev/null
-    fi
-    rm -f ~/aztec/docker-compose.yml ~/aztec/.env
-    echo "✅ Old Aztec Docker setup removed."
+    
+    sudo systemctl enable docker
+    sudo systemctl restart docker
+    echo -e "${GREEN}✅ Docker installed successfully${NC}"
+  else
+    # Docker IS installed - just skip
+    echo -e "${GREEN}✅ Docker already installed: $(docker --version)${NC}"
   fi
 
-  # Docker installation
-  sudo apt-get install -y ca-certificates curl gnupg lsb-release
-  sudo install -m 0755 -d /etc/apt/keyrings
-  sudo rm -f /etc/apt/keyrings/docker.gpg
-  . /etc/os-release
-  curl -fsSL "https://download.docker.com/linux/$ID/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  sudo chmod a+r /etc/apt/keyrings/docker.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$ID $VERSION_CODENAME stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-  sudo apt update -y && sudo apt upgrade -y
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  sudo systemctl enable docker
-  sudo systemctl restart docker
-  echo -e "${CYAN}• Docker Installed ✔${NC}"
-
-  # Fix Docker permission denied issue
+  # Add user to docker group
   sudo usermod -aG docker $USER
-  echo "✅ User added to docker group. Please log out and log back in (or run 'exec su - $USER') for changes to take effect."
 
-  # Step 5: Firewall
+  # Step 5: Check for ONLY Aztec containers/images
+  echo -e "${CYAN}Checking for existing Aztec setup...${NC}"
+  
+  AZTEC_CONTAINERS=$(sudo docker ps -aq --filter ancestor=aztecprotocol/aztec 2>/dev/null)
+  AZTEC_NAMED=$(sudo docker ps -a --format "{{.ID}} {{.Names}}" 2>/dev/null | grep -i "aztec" | awk '{print $1}')
+  AZTEC_IMAGES=$(sudo docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" 2>/dev/null | grep "aztecprotocol/aztec" | awk '{print $2}')
+
+  if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_NAMED" ] || [ -n "$AZTEC_IMAGES" ]; then
+    echo -e "${YELLOW}⚠️  Existing Aztec setup detected!${NC}"
+    echo ""
+    echo -e "${CYAN}The following will be removed:${NC}"
+    if [ -n "$AZTEC_CONTAINERS" ] || [ -n "$AZTEC_NAMED" ]; then
+      echo -e "${YELLOW}Containers:${NC}"
+      sudo docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" 2>/dev/null | grep -i "aztec"
+    fi
+    if [ -n "$AZTEC_IMAGES" ]; then
+      echo -e "${YELLOW}Images:${NC}"
+      sudo docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null | grep "aztecprotocol/aztec"
+    fi
+    echo ""
+    
+    read -p "➡ Remove ONLY Aztec containers/images? (y/N): " del_choice
+    
+    if [[ "$del_choice" =~ ^[Yy]$ ]]; then
+      if [ -n "$AZTEC_CONTAINERS" ]; then
+        echo "Stopping Aztec containers..."
+        echo "$AZTEC_CONTAINERS" | xargs -r sudo docker stop 2>/dev/null || true
+        echo "$AZTEC_CONTAINERS" | xargs -r sudo docker rm 2>/dev/null || true
+      fi
+      
+      if [ -n "$AZTEC_NAMED" ]; then
+        echo "Stopping named Aztec containers..."
+        echo "$AZTEC_NAMED" | xargs -r sudo docker stop 2>/dev/null || true
+        echo "$AZTEC_NAMED" | xargs -r sudo docker rm 2>/dev/null || true
+      fi
+      
+      if [ -n "$AZTEC_IMAGES" ]; then
+        echo "Removing Aztec images..."
+        echo "$AZTEC_IMAGES" | xargs -r sudo docker rmi -f 2>/dev/null || true
+      fi
+      
+      rm -rf ~/aztec ~/.aztec
+      echo -e "${GREEN}✅ ONLY Aztec removed (RPC and other containers safe)${NC}"
+    else
+      echo -e "${RED}❌ Installation cancelled${NC}"
+      return
+    fi
+  fi
+
+  # Step 6: Firewall setup
+  echo -e "${CYAN}Configuring firewall...${NC}"
   sudo apt install -y ufw >/dev/null 2>&1
-  sudo ufw --force enable
-  sudo ufw allow 22/tcp
+  sudo ufw allow 22
   sudo ufw allow ssh
   sudo ufw allow 40400/tcp
   sudo ufw allow 40400/udp
   sudo ufw allow 8080
+  echo "y" | sudo ufw enable 2>/dev/null || sudo ufw --force enable
   sudo ufw reload
+  echo -e "${GREEN}✅ Firewall configured${NC}"
 
-  # Step 6: Setup directory
-  rm -rf ~/aztec && mkdir ~/aztec && cd ~/aztec
+  # Step 7: Setup directory
+  mkdir -p ~/aztec && cd ~/aztec
 
-  # Step 7: User config
-  echo -e "${CYAN}Let's configure your node...${NC}"
+  # Step 8: Get configuration with AUTO 0x PREFIX
+  echo -e "${CYAN}Configuring your Aztec node...${NC}"
+
+  VPS_IP=$(curl -s ipv4.icanhazip.com)
+  echo -e "${GREEN}➡ Auto-detected VPS IP: $VPS_IP${NC}"
+  echo ""
+
   read -p "➡ Enter Sepolia RPC URL: " ETH_RPC
   read -p "➡ Enter Beacon RPC URL: " BEACON_RPC
-  read -p "➡ Enter Validator Private Key (0x...): " VAL_PRIV
-  read -p "➡ Enter Wallet Address (0x...): " WALLET_ADDR
-  VPS_IP=$(curl -s ipv4.icanhazip.com)
-  echo "➡ Auto-detected VPS IP: $VPS_IP"
+  read -p "➡ Enter Validator Private Key: " VAL_PRIV_INPUT
+  read -p "➡ Enter Wallet Address: " WALLET_ADDR_INPUT
 
+  # Auto-add 0x prefix if not present
+  if [[ ! "$VAL_PRIV_INPUT" =~ ^0x ]]; then
+    VAL_PRIV="0x${VAL_PRIV_INPUT}"
+    echo -e "${YELLOW}ℹ️  Added '0x' prefix to private key${NC}"
+  else
+    VAL_PRIV="$VAL_PRIV_INPUT"
+  fi
+
+  if [[ ! "$WALLET_ADDR_INPUT" =~ ^0x ]]; then
+    WALLET_ADDR="0x${WALLET_ADDR_INPUT}"
+    echo -e "${YELLOW}ℹ️  Added '0x' prefix to wallet address${NC}"
+  else
+    WALLET_ADDR="$WALLET_ADDR_INPUT"
+  fi
+
+  # Show configuration summary
+  echo ""
+  echo -e "${CYAN}Configuration Summary:${NC}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo -e "${WHITE}VPS IP:${NC} $VPS_IP"
+  echo -e "${WHITE}Private Key:${NC} ${VAL_PRIV:0:10}...${VAL_PRIV: -4}"
+  echo -e "${WHITE}Wallet Address:${NC} $WALLET_ADDR"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  read -p "➡ Is this correct? (Y/n): " confirm
+  if [[ "$confirm" =~ ^[Nn]$ ]]; then
+    echo -e "${RED}❌ Configuration cancelled. Please restart installation.${NC}"
+    return
+  fi
+
+  # Create .env file
   cat > .env <<EOF
 ETHEREUM_RPC_URL=$ETH_RPC
 CONSENSUS_BEACON_URL=$BEACON_RPC
@@ -116,9 +196,9 @@ COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
 EOF
 
-  echo -e "${CYAN}.env file created successfully ✅${NC}"
+  echo -e "${GREEN}✅ .env file created${NC}"
 
-  # Step 8: Create docker-compose.yml
+  # Step 9: Create docker-compose.yml
   cat > docker-compose.yml <<'EOF'
 services:
   aztec-node:
@@ -144,85 +224,29 @@ services:
       - ${HOME}/.aztec/testnet/data/:/data
 EOF
 
-  # Step 9: Start node (NO SNAPSHOT RESTORE)
+  # Step 10: Start node
+  echo -e "${CYAN}Starting Aztec node...${NC}"
   sudo docker compose -f ~/aztec/docker-compose.yml up -d
-  echo -e "${CYAN}Installation finished 🚀 Use option 3 to view logs.${NC}"
+  
+  echo ""
+  echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
+  echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
+  echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
+  echo ""
+  echo -e "${CYAN}📝 Important Notes:${NC}"
+  echo "   • RPC and other Docker containers were NOT touched"
+  echo "   • Log out and log back in for Docker permissions"
+  echo "   • Or run: ${YELLOW}newgrp docker${NC}"
+  echo ""
+  echo -e "${CYAN}📊 Next Steps:${NC}"
+  echo "   • Use option 3 to view logs"
+  echo "   • Use option 7 to check ports & peer ID"
+  echo ""
 }
 
 # ───[ RPC HEALTH CHECK ]───
 check_rpc_health() {
-  while true; do
-    clear
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    echo -e "${CYAN}--- RPC Health Check ---${NC}"
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${CYAN}1) Use RPCs from .env file${NC}"
-    echo -e "${CYAN}2) Enter custom Sepolia and Beacon RPC URLs${NC}"
-    echo -e "${CYAN}3) Back to Main Menu${NC}"
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    echo ""
-    read -p "$(echo -e "${CYAN}Choose option (1-3): ${NC}")" rpc_option
-    case $rpc_option in
-      1)
-        if [ -f "$HOME/aztec/.env" ]; then
-          source "$HOME/aztec/.env"
-          SEPOLIA_RPC=$ETHEREUM_RPC_URL
-          BEACON_RPC=$CONSENSUS_BEACON_URL
-        else
-          echo -e "${RED}⚠️ .env not found. Please run Full Install first.${NC}"
-          read -p "Press Enter to continue..."
-          continue
-        fi
-        ;;
-      2)
-        read -p "$(echo -e ${CYAN}➡ Enter Sepolia RPC URL: ${NC})" SEPOLIA_RPC
-        read -p "$(echo -e ${CYAN}➡ Enter Beacon RPC URL: ${NC})" BEACON_RPC
-        ;;
-      3)
-        break
-        ;;
-      *)
-        echo -e "${RED}Invalid option. Try again.${NC}"
-        sleep 1
-        continue
-        ;;
-    esac
-
-    echo ""
-    echo -e "${CYAN}🔎 Checking Sepolia RPC:${NC} $SEPOLIA_RPC"
-    if curl -s --max-time 5 "$SEPOLIA_RPC" >/dev/null 2>&1; then
-      echo -e "${GREEN}✅ Reachable${NC}"
-    else
-      echo -e "${RED}❌ Not reachable${NC}"
-    fi
-
-    echo -e "${CYAN}🔎 Checking Beacon RPC:${NC} $BEACON_RPC"
-    if curl -s --max-time 5 "$BEACON_RPC" >/dev/null 2>&1; then
-      echo -e "${GREEN}✅ Reachable${NC}"
-    else
-      echo -e "${RED}❌ Not reachable${NC}"
-    fi
-
-    echo ""
-    read -p "Press Enter to continue..."
-  done
-}
-# ───[ PORTS & PEER ID CHECK ]───
-check_ports_and_peerid() {
-  echo "Checking important ports..."
-  for p in "40400/tcp" "40400/udp" "8080/tcp"; do
-    proto=${p##*/}; port=${p%%/*}
-    if nc -${proto:0:1} -z -w2 127.0.0.1 "$port" >/dev/null 2>&1; then
-      echo "✅ Port $p is OPEN"
-    else
-      echo "❌ Port $p is CLOSED"
-    fi
-  done
-
-  echo "--- Checking Peer ID..."
-  PEER_ID=$(sudo docker logs aztec-sequencer 2>&1 | grep -o '"peerId":"[^"]*"' | head -n 1 | awk -F':' '{print $2}' | tr -d '"')
-  [ -n "$PEER_ID" ] && echo "✅ Peer ID: $PEER_ID" || echo "⚠️ Peer ID not found."
+  bash <(curl -fsSL "https://raw.githubusercontent.com/SpeedoWeb3/Testing/refs/heads/main/check_rpc_health")
 }
 
 # ───[ NODE PERFORMANCE DASHBOARD ]───
@@ -273,13 +297,13 @@ check_node_performance() {
     echo -e "${YELLOW}Disk: Unable to retrieve (df not installed).${NC}"
   fi
 
-  # Network Traffic (auto-installs tools if missing)
+  # Network Traffic
   echo ""
   echo -e "${CYAN}🌐 Network Traffic (5s avg):${NC}"
   if ! command -v sar &>/dev/null && ! command -v ifstat &>/dev/null; then
     echo -e "${YELLOW}Network tools missing, installing now...${NC}"
-    sudo apt-get update
-    sudo apt-get install -y sysstat ifstat
+    sudo apt-get update -y >/dev/null 2>&1
+    sudo apt-get install -y sysstat ifstat >/dev/null 2>&1
   fi
   if command -v sar &>/dev/null; then
     NET_IF=$(ip route | grep default | awk '{print $5}' | head -n 1)
@@ -294,39 +318,38 @@ check_node_performance() {
     echo "RX/TX for $NET_IF (kB/s):"
     ifstat -i "$NET_IF" 1 5 | tail -n 1
   else
-    echo -e "${RED}sysstat and ifstat failed to install. Please check your system!${NC}"
+    echo -e "${RED}Network tools installation failed.${NC}"
   fi
 
   # Docker stats
-  echo ""
-  echo -e "${CYAN}🐳 Docker Container Usage:${NC}"
-  if command -v docker &>/dev/null; then
-    sudo docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
-  else
-    echo -e "${YELLOW}Docker not installed or not in PATH.${NC}"
-  fi
+echo ""
+echo -e "${CYAN}🐳 Docker Container Usage:${NC}"
+if command -v docker &>/dev/null; then
+  sudo docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+else
+  echo -e "${YELLOW}Docker not installed.${NC}"
+fi
 
-  echo ""
-  echo -e "${GREEN}✅ At this moment your VPS is doing fine — no critical bottlenecks.${NC}"
-  echo -e "${CYAN}💡 Tip:${NC} If CPU/MEM/Disk stays red often → consider upgrading VPS or optimizing containers."
-  echo -e "${CYAN}─────────────────────────────────────────────${NC}"
+echo ""
+echo -e "${GREEN}✅ Performance check complete!${NC}"
+echo -e "${CYAN}─────────────────────────────────────────────${NC}"
+}
+# ───[ PORT & PEER ID CHECK ]───
+check_ports_and_peerid() {
+  clear
+  bash <(curl -fsSL "https://raw.githubusercontent.com/SpeedoWeb3/Testing/refs/heads/main/Port_cheaker.sh")
 }
 
-# ───[ SHOW ONLY RUNNING DOCKER CONTAINERS ]───
+# ───[ SHOW RUNNING DOCKER CONTAINERS ]───
 show_running_docker_containers() {
-  ORANGE='\033[1;33m'   # Neon yellow-orange tone
-  AMBER='\033[0;33m'    # Warm orange shade
-  WHITE='\033[1;37m'    # For light contrast
-  RESET='\033[0m'
-
   echo ""
-  echo -e "${ORANGE}🐳  Running Docker Containers${RESET}"
-  echo -e "${AMBER}────────────────────────────────────────────${RESET}"
+  echo -e "${ORANGE}🐳  Running Docker Containers${NC}"
+  echo -e "${AMBER}────────────────────────────────────────────${NC}"
   echo ""
 
   # Ensure port checking tools exist
   if ! command -v ss &>/dev/null && ! command -v netstat &>/dev/null; then
-    echo -e "${AMBER}Installing missing network tools (net-tools)...${RESET}"
+    echo -e "${AMBER}Installing network tools...${NC}"
     sudo apt-get update -y >/dev/null 2>&1
     sudo apt-get install -y net-tools >/dev/null 2>&1
   fi
@@ -334,7 +357,7 @@ show_running_docker_containers() {
   CONTAINERS=$(sudo docker ps -q)
 
   if [ -z "$CONTAINERS" ]; then
-    echo -e "${AMBER}⚠️  No containers are currently running.${RESET}"
+    echo -e "${AMBER}⚠️  No containers are currently running.${NC}"
   else
     for ID in $CONTAINERS; do
       NAME=$(sudo docker inspect -f '{{.Name}}' "$ID" | sed 's|/||')
@@ -353,7 +376,7 @@ show_running_docker_containers() {
         UPTIME_FMT="Unknown"
       fi
 
-      # Ports (fallback for host network, e.g. aztec-sequencer)
+      # Ports
       PORTS=$(sudo docker port "$ID" 2>/dev/null | paste -sd ", " -)
       if [ "$NETWORK_MODE" = "host" ] && [ -z "$PORTS" ]; then
         if command -v ss &>/dev/null; then
@@ -363,141 +386,101 @@ show_running_docker_containers() {
         fi
       fi
 
-      echo -e "${WHITE}Docker Name${AMBER}  :${RESET} ${ORANGE}$NAME${RESET}"
-      echo -e "${WHITE}Image${AMBER}        :${RESET} ${ORANGE}$IMAGE${RESET}"
-      echo -e "${WHITE}Status${AMBER}       :${RESET} ${ORANGE}${STATUS^}${RESET}"
-      echo -e "${WHITE}Network${AMBER}      :${RESET} ${ORANGE}$NETWORK_MODE${RESET}"
-      echo -e "${WHITE}Uptime${AMBER}       :${RESET} ${ORANGE}$UPTIME_FMT${RESET}"
+      echo -e "${WHITE}Docker Name${AMBER}  :${NC} ${ORANGE}$NAME${NC}"
+      echo -e "${WHITE}Image${AMBER}        :${NC} ${ORANGE}$IMAGE${NC}"
+      echo -e "${WHITE}Status${AMBER}       :${NC} ${ORANGE}${STATUS^}${NC}"
+      echo -e "${WHITE}Network${AMBER}      :${NC} ${ORANGE}$NETWORK_MODE${NC}"
+      echo -e "${WHITE}Uptime${AMBER}       :${NC} ${ORANGE}$UPTIME_FMT${NC}"
 
       if [ -n "$PORTS" ]; then
-        echo -e "${WHITE}Ports${AMBER}        :${RESET} ${ORANGE}$PORTS${RESET}"
+        echo -e "${WHITE}Ports${AMBER}        :${NC} ${ORANGE}$PORTS${NC}"
       else
-        echo -e "${WHITE}Ports${AMBER}        :${RESET} None"
+        echo -e "${WHITE}Ports${AMBER}        :${NC} None"
       fi
 
-      echo -e "${AMBER}────────────────────────────────────────────${RESET}"
+      echo -e "${AMBER}────────────────────────────────────────────${NC}"
     done
 
     COUNT=$(echo "$CONTAINERS" | wc -w)
     echo ""
-    echo -e "📦 ${WHITE}Total running containers${AMBER}:${RESET} ${ORANGE}$COUNT${RESET}"
+    echo -e "📦 ${WHITE}Total running containers${AMBER}:${NC} ${ORANGE}$COUNT${NC}"
   fi
 
   echo ""
 }
-# ───[ DOZZLE MANAGER: INSTALL / SHOW / DELETE ]───
+
+# ───[ DOZZLE MANAGER ]───
 launch_dozzle() {
-  while true; do
-    clear
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    echo -e "${CYAN}🪩 DOZZLE (Docker Log Viewer) MANAGER${NC}"
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    echo ""
-    echo -e "${CYAN}1) Install Dozzle${NC}"
-    echo -e "${CYAN}2) Show Existing Dozzle${NC}"
-    echo -e "${CYAN}3) Delete Dozzle${NC}"
-    echo -e "${CYAN}4) Back to Main Menu${NC}"
-    echo -e "${CYAN}───────────────────────────────────────────────${NC}"
-    read -p "Choose an option (1-4): " dozzle_choice
-
-    case $dozzle_choice in
-      1)
-        echo "🚀 Installing & Launching Dozzle..."
-        sudo docker pull amir20/dozzle:latest >/dev/null 2>&1
-
-        # Stop old Dozzle container if running
-        if sudo docker ps -a --format '{{.Names}}' | grep -q '^dozzle$'; then
-          echo "⚙️ Removing old Dozzle container..."
-          sudo docker stop dozzle >/dev/null 2>&1
-          sudo docker rm dozzle >/dev/null 2>&1
-        fi
-
-        # Run new container
-        sudo docker run -d --name dozzle --restart unless-stopped \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -p 9999:8080 amir20/dozzle:latest >/dev/null 2>&1
-
-        # Firewall rules
-        sudo ufw allow 9999 >/dev/null 2>&1
-        sudo ufw reload >/dev/null 2>&1
-
-        VPS_IP=$(curl -s ipv4.icanhazip.com)
-        echo "✅ Dozzle installed & running!"
-        echo "🌐 Open in browser: http://$VPS_IP:9999"
-        echo "🔎 Search 'aztec-sequencer' to view node logs."
-        read -p "Press Enter to continue..."
-        ;;
-
-      2)
-        echo "🔎 Checking Dozzle status..."
-        if sudo docker ps --format '{{.Names}}' | grep -q '^dozzle$'; then
-          VPS_IP=$(curl -s ipv4.icanhazip.com)
-          echo "✅ Dozzle is running!"
-          echo "🌐 Access it at: http://$VPS_IP:9999"
-          echo "🔎 Search 'aztec-sequencer' inside Dozzle to view logs."
-        else
-          echo "❌ Dozzle is not running."
-        fi
-        read -p "Press Enter to continue..."
-        ;;
-
-      3)
-        echo "⚠️ This will delete the Dozzle container completely."
-        read -p "Are you sure? (Y/n): " confirm
-        if [[ "$confirm" =~ ^[Yy]$ || -z "$confirm" ]]; then
-          sudo docker stop dozzle >/dev/null 2>&1
-          sudo docker rm dozzle >/dev/null 2>&1
-          echo "✅ Dozzle container deleted."
-        else
-          echo "❌ Cancelled."
-        fi
-        read -p "Press Enter to continue..."
-        ;;
-
-      4)
-        break
-        ;;
-      *)
-        echo "Invalid choice. Try again."
-        sleep 1
-        ;;
-    esac
-  done
+  echo -e "${CYAN}Launching Advanced Dozzle Manager...${NC}"
+  bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Testing/refs/heads/main/Dozzle%20manager)
 }
+
 # ──────────────[ MAIN MENU ]──────────────
 while true; do
   show_header
+  echo ""
   echo -e "${CYAN}1) Full Install${NC}"
-  echo -e "${CYAN}2) Run Node${NC}"
-  echo -e "${CYAN}3) View Logs${NC}"
-  echo -e "${CYAN}4) View & Reconfigure .env${NC}"
-  echo -e "${CYAN}5) Check RPC Health${NC}"
-  echo -e "${CYAN}6) Delete Node${NC}"
-  echo -e "${CYAN}7) Check Ports & Peer ID${NC}"
-  echo -e "${CYAN}8) Update Node${NC}"
-  echo -e "${CYAN}9) Check Node Version${NC}"
-  echo -e "${CYAN}10) Check Node Performance${NC}"
-  echo -e "${CYAN}11) Show Running Docker Containers${NC}"
-  echo -e "${CYAN}12) Launch Dozzle (View Logs in Browser)${NC}"
-  echo -e "${CYAN}13) Exit${NC}"
+  echo -e "${CYAN}2) View Logs${NC}"
+  echo -e "${CYAN}3) View & Reconfigure .env${NC}"
+  echo -e "${CYAN}4) Check RPC Health${NC}"
+  echo -e "${CYAN}5) Delete Node${NC}"
+  echo -e "${CYAN}6) Check Ports & Peer ID${NC}"
+  echo -e "${CYAN}7) Update Node${NC}"
+  echo -e "${CYAN}8) Check Node Version${NC}"
+  echo -e "${CYAN}9) Check Node Performance${NC}"
+  echo -e "${CYAN}10) Show Running Docker Containers${NC}"
+  echo -e "${CYAN}11) Launch Dozzle (View Logs in Browser)${NC}"
+  echo -e "${CYAN}12) Exit${NC}"
   echo ""
   read -p "Choose option (1-12): " choice
 
   case $choice in
-    1) install_aztec_node ;;
-    2) cd ~/aztec && sudo docker compose up -d && sudo docker compose logs -f ;;
-    3) cd ~/aztec && sudo docker compose logs -f ;;
-    4)
-      echo "--- Current .env ---"
-      cat ~/aztec/.env
+    1) 
+      install_aztec_node 
+      ;;
+      
+    2) 
+      cd ~/aztec && sudo docker compose logs -f 
+      ;;
+      
+    3)
+      echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+      echo -e "${CYAN}Current .env Configuration:${NC}"
+      echo -e "${CYAN}───────────────────────────────────────────────${NC}"
+      if [ -f ~/aztec/.env ]; then
+        cat ~/aztec/.env
+      else
+        echo -e "${RED}⚠️ .env file not found!${NC}"
+        read -p "Press Enter to continue..."
+        continue
+      fi
       echo ""
-      read -p "➡ Do you want to edit values? (Y/n): " edit_choice
-      if [[ "$edit_choice" =~ ^[Yy]$ || -z "$edit_choice" ]]; then
+      read -p "➡ Do you want to edit values? (y/N): " edit_choice
+      
+      if [[ "$edit_choice" =~ ^[Yy]$ ]]; then
+        echo ""
         read -p "➡ Enter new Sepolia RPC URL: " ETH_RPC
         read -p "➡ Enter new Beacon RPC URL: " BEACON_RPC
-        read -p "➡ Enter new Validator Private Key (0x...): " VAL_PRIV
-        read -p "➡ Enter new Wallet Address (0x...): " WALLET_ADDR
+        read -p "➡ Enter new Validator Private Key: " VAL_PRIV_INPUT
+        read -p "➡ Enter new Wallet Address: " WALLET_ADDR_INPUT
+        
+        # Auto-add 0x prefix if not present
+        if [[ ! "$VAL_PRIV_INPUT" =~ ^0x ]]; then
+          VAL_PRIV="0x${VAL_PRIV_INPUT}"
+          echo -e "${YELLOW}ℹ️  Added '0x' prefix to private key${NC}"
+        else
+          VAL_PRIV="$VAL_PRIV_INPUT"
+        fi
+
+        if [[ ! "$WALLET_ADDR_INPUT" =~ ^0x ]]; then
+          WALLET_ADDR="0x${WALLET_ADDR_INPUT}"
+          echo -e "${YELLOW}ℹ️  Added '0x' prefix to wallet address${NC}"
+        else
+          WALLET_ADDR="$WALLET_ADDR_INPUT"
+        fi
+        
         VPS_IP=$(curl -s ipv4.icanhazip.com)
+        
         cat > ~/aztec/.env <<EOF
 ETHEREUM_RPC_URL=$ETH_RPC
 CONSENSUS_BEACON_URL=$BEACON_RPC
@@ -505,40 +488,108 @@ VALIDATOR_PRIVATE_KEYS=$VAL_PRIV
 COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
 EOF
-        echo "✅ .env updated. Restarting node..."
-        cd ~/aztec && sudo docker compose up -d
+        echo ""
+        echo -e "${GREEN}✅ .env updated successfully!${NC}"
+        echo -e "${CYAN}Restarting node with new configuration...${NC}"
+        cd ~/aztec && sudo docker compose down && sudo docker compose up -d
+        echo -e "${GREEN}✅ Node restarted!${NC}"
+      else
+        echo -e "${YELLOW}No changes made.${NC}"
       fi
       ;;
-    5) check_rpc_health ;;
-    6)
-      echo -e "${RED}⚠️ This will delete your Aztec Node only:${NC}"
-      echo "   - ~/aztec"
-      echo "   - ~/.aztec/testnet"
-      echo "   - Docker container: aztec-sequencer"
-      read -p "➡ Are you sure? (Y/n): " confirm1
-      if [[ "$confirm1" =~ ^[Yy]$ || -z "$confirm1" ]]; then
-        read -p "➡ Are you REALLY sure? This cannot be undone. (Y/n): " confirm2
-        if [[ "$confirm2" =~ ^[Yy]$ || -z "$confirm2" ]]; then
-          sudo docker stop aztec-sequencer 2>/dev/null
-          sudo docker rm aztec-sequencer 2>/dev/null
-          sudo docker rmi aztecprotocol/aztec:2.0.2 2>/dev/null
+      
+    4) 
+      check_rpc_health 
+      ;;
+      
+    5)
+      echo ""
+      echo -e "${RED}╔═══════════════════════════════════════════╗${NC}"
+      echo -e "${RED}║    ⚠️  DELETE AZTEC NODE WARNING  ⚠️     ║${NC}"
+      echo -e "${RED}╚═══════════════════════════════════════════╝${NC}"
+      echo ""
+      echo -e "${YELLOW}This will delete ONLY your Aztec Node:${NC}"
+      echo "   • ~/aztec directory"
+      echo "   • ~/.aztec/testnet data"
+      echo "   • Docker container: aztec-sequencer"
+      echo "   • Docker image: aztecprotocol/aztec:2.0.2"
+      echo ""
+      echo -e "${GREEN}✅ RPC and other containers will NOT be touched!${NC}"
+      echo ""
+      read -p "➡ Are you sure? (y/N): " confirm1
+      
+      if [[ "$confirm1" =~ ^[Yy]$ ]]; then
+        echo ""
+        echo -e "${RED}⚠️  FINAL WARNING: This action cannot be undone!${NC}"
+        read -p "➡ Type 'DELETE' to confirm: " confirm2
+        
+        if [[ "$confirm2" == "DELETE" ]]; then
+          echo ""
+          echo -e "${CYAN}Stopping Aztec container...${NC}"
+          sudo docker stop aztec-sequencer 2>/dev/null || true
+          
+          echo -e "${CYAN}Removing Aztec container...${NC}"
+          sudo docker rm aztec-sequencer 2>/dev/null || true
+          
+          echo -e "${CYAN}Removing Aztec image...${NC}"
+          sudo docker rmi aztecprotocol/aztec:2.0.2 2>/dev/null || true
+          
+          echo -e "${CYAN}Removing Aztec directories...${NC}"
           rm -rf ~/aztec ~/.aztec/testnet
-          echo "✅ Node deleted."
+          
+          echo ""
+          echo -e "${GREEN}✅ Aztec Node completely deleted!${NC}"
+          echo -e "${GREEN}✅ Other Docker containers remain intact.${NC}"
         else
-          echo "❌ Second confirmation failed. Cancelled."
+          echo -e "${RED}❌ Confirmation failed. Deletion cancelled.${NC}"
         fi
       else
-        echo "❌ Delete cancelled."
+        echo -e "${YELLOW}❌ Delete cancelled.${NC}"
       fi
       ;;
-    7) check_ports_and_peerid ;;
-    8) sudo docker pull aztecprotocol/aztec:2.0.2 && (cd ~/aztec && sudo docker compose up -d) ;;
-    9) sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version ;;
-    10) check_node_performance ;;
-    11) show_running_docker_containers ;;
-    12) launch_dozzle ;;
-    13) echo "Exiting..."; break ;;
+      
+    6) 
+      check_ports_and_peerid 
+      ;;
+      
+    7) 
+      echo -e "${CYAN}Updating Aztec Node...${NC}"
+      sudo docker pull aztecprotocol/aztec:2.0.2
+      cd ~/aztec && sudo docker compose down && sudo docker compose up -d
+      echo -e "${GREEN}✅ Node updated and restarted!${NC}"
+      ;;
+      
+    8) 
+      echo -e "${CYAN}Checking Aztec Node Version...${NC}"
+      if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
+        sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
+      else
+        echo -e "${RED}❌ Aztec container is not running!${NC}"
+      fi
+      ;;
+      
+    9) 
+      check_node_performance 
+      ;;
+      
+    10) 
+      show_running_docker_containers 
+      ;;
+      
+    11) 
+      launch_dozzle 
+      ;;
+      
+    12) 
+      exit 0
+      ;;
+      
+    *)
+      echo -e "${RED}❌ Invalid option. Please choose 1-12.${NC}"
+      sleep 2
+      ;;
   esac
 
-  read -p "Press Enter to continue..."
+  echo ""
+  read -p "Press Enter to return to main menu..."
 done
