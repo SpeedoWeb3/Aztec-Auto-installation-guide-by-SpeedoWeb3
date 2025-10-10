@@ -117,7 +117,7 @@ sudo ufw allow 8080/tcp
 sudo ufw reload
 ```
 
-###  Node not syncing
+### Aztec Node not syncing
 ```bash
 #Go to aztec directory
 cd && cd aztec
@@ -129,30 +129,23 @@ docker compose logs -100
 docker compose down -v && docker compose up -d
 ```
 
-###  RPC not responding
-```bash
-# Test RPC
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"node_getVersion","params":[],"id":1}'
+### Check Rpc Sync Status 
+```
+curl -X POST -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}' \
+http://localhost:8545
+```
 
-### Check node sync status
-
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"node_getStatus","params":[],"id":1}' ```
-
-### Check block number
+### Check Rpc block number
+```
 curl -X POST http://localhost:8080 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+  ```
 ---
 
-
-## 📚 Useful Commands
-
 ### Node Management
-```bash
+```
 # Go to aztec directory first
 cd && cd aztec
 
