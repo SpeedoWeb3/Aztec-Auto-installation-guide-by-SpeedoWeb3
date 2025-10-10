@@ -126,7 +126,7 @@ cd && cd aztec
 docker compose logs -100
 
 # Restart node
-docker compose down -v && dockrr compose up -d
+docker compose down -v && docker compose up -d
 ```
 
 ###  RPC not responding
@@ -135,9 +135,19 @@ docker compose down -v && dockrr compose up -d
 curl -X POST http://localhost:8080 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"node_getVersion","params":[],"id":1}'
-```
 
+### Check node sync status
+
+curl -X POST http://localhost:8080 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"node_getStatus","params":[],"id":1}' ```
+
+### Check block number
+curl -X POST http://localhost:8080 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ---
+
 
 ## 📚 Useful Commands
 
