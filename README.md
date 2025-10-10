@@ -43,8 +43,8 @@ Before running the installer, ensure you have:
 
 - ✅ **VPS/Server** with Ubuntu 20.04+ or Debian 11+
 - ✅ **Root or sudo access**
-- ✅ **Minimum 4GB RAM** (8GB recommended)
-- ✅ **50GB+ free disk space**
+- ✅ **Minimum 8GB RAM** (16GB recommended)
+- ✅ **250GB+ free disk space**
 - ✅ **Open ports**: 40400 (TCP/UDP), 8080 (TCP)
 - ✅ **curl** installed (`sudo apt install curl -y`)
 
@@ -54,36 +54,27 @@ Before running the installer, ensure you have:
 
 Once you run the installer, you'll see an interactive menu:
 
-```
-╔════════════════════════════════════════╗
-║     AZTEC NODE MANAGER v1.0           ║
-╠════════════════════════════════════════╣
-║  1. Install Aztec Node (Full Setup)   ║
-║  2. Start/Stop Node                   ║
-║  3. View Live Logs                    ║
-║  4. Edit Configuration                ║
-║  5. RPC Health Check                  ║
-║  6. Port & Peer ID Status             ║
-║  7. Update Node                       ║
-║  8. Delete Node                       ║
-║  9. Exit                              ║
-╚════════════════════════════════════════╝
-```
+
 
 ### 🔹 Option Details
-
+```
 | Option | Function |
 |--------|----------|
-| **1. Install** | Full installation with snapshot download |
-| **2. Start/Stop** | Manage Docker container |
-| **3. Logs** | View real-time node logs |
-| **4. Config** | Edit `.env` file safely |
-| **5. Health Check** | Test RPC endpoint |
-| **6. Port Check** | Verify ports & get Peer ID |
-| **7. Update** | Pull latest Aztec version |
-| **8. Delete** | Remove node (with backup option) |
-
+| **1. Full Install** | Complete installation with snapshot download |
+| **2. View Logs** | View real-time node logs in terminal |
+| **3. View & Reconfigure .env** | Edit configuration file safely |
+| **4. Check RPC Health** | Test RPC endpoint health |
+| **5. Delete Node** | Remove node with confirmation |
+| **6. Check Ports & Peer ID** | Verify ports & get Peer ID with explorer link |
+| **7. Update Node** | Pull latest Aztec version |
+| **8. Check Node Version** | Display current node version |
+| **9. Check Node Performance** | Full system diagnostics & health check |
+| **10. Show Docker Containers** | List all running containers |
+| **11. Launch Dozzle** | Web-based log viewer (access at port 9999) |
+| **12. Exit** | Close the menu |
+```
 ---
+
 
 ## 🔍 Port Checker Standalone
 
