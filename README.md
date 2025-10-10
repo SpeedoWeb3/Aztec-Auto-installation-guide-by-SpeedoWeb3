@@ -96,7 +96,7 @@ bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Aztec--Status--Check
 
 ## 🆘 Troubleshooting
 
-### ❌ Script won't run
+###  Script won't run
 ```bash
 # Install curl
 sudo apt update && sudo apt install curl -y
@@ -105,7 +105,7 @@ sudo apt update && sudo apt install curl -y
 sudo bash <(curl -fsSL https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Auto-installation-guide-by-SpeedoWeb3/main/aztec-node-installer.sh)
 ```
 
-### ❌ Ports showing closed
+###  Ports showing closed
 ```bash
 # Check firewall
 sudo ufw status
@@ -117,16 +117,19 @@ sudo ufw allow 8080/tcp
 sudo ufw reload
 ```
 
-### ❌ Node not syncing
+###  Node not syncing
 ```bash
+#Go to aztec directory
+cd && cd aztec
+
 # Check logs
-docker logs -f aztec-sequencer
+docker compose logs -100
 
 # Restart node
-docker restart aztec-sequencer
+docker compose down -v && dockrr compose up -d
 ```
 
-### ❌ RPC not responding
+###  RPC not responding
 ```bash
 # Test RPC
 curl -X POST http://localhost:8080 \
@@ -140,17 +143,20 @@ curl -X POST http://localhost:8080 \
 
 ### Node Management
 ```bash
+# Go to aztec directory first
+cd && cd aztec
+
 # Start node
-docker start aztec-sequencer
+docker compose up -d 
 
 # Stop node
-docker stop aztec-sequencer
+docker compose down -v
 
 # Restart node
-docker restart aztec-sequencer
+docker compose down -v && docker compose up -d
 
 # View logs
-docker logs -f aztec-sequencer
+docker compose logs -fn 100
 
 # Check status
 docker ps | grep aztec
@@ -165,7 +171,7 @@ df -h
 free -h
 
 # Check CPU
-top
+htop
 ```
 
 ---
@@ -176,7 +182,7 @@ top
 - 📖 [Official Documentation](https://docs.aztec.network)
 - 💬 [Discord Community](https://discord.gg/aztec)
 - 🐦 [Twitter](https://twitter.com/aztecnetwork)
-- 🔍 [Nethermind Explorer](https://explorer.aztec.network)
+- 🔍 [Nethermind Explorer](https://aztec.nethermind.io/)
 
 ---
 
