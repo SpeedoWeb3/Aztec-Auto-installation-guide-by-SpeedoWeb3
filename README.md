@@ -57,7 +57,7 @@ Once you run the installer, you'll see an interactive menu:
 
 
 ### 🔹 Option Details
-```
+```bash
 | Option | Function |
 |--------|----------|
 | **1. Full Install** | Complete installation with snapshot download |
@@ -130,14 +130,14 @@ docker compose down -v && docker compose up -d
 ```
 
 ### Check Rpc Sync Status 
-```
+```bash
 curl -X POST -H "Content-Type: application/json" \
 --data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}' \
 http://localhost:8545
 ```
 
 ### Check Rpc block number
-```
+```bash
 curl -X POST http://localhost:8080 \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
@@ -145,7 +145,7 @@ curl -X POST http://localhost:8080 \
 ---
 
 ### Node Management
-```
+```bash
 # Go to aztec directory first
 cd && cd aztec
 
