@@ -234,8 +234,8 @@ echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${CYAN}📊 Next Steps:${NC}"
-echo "   • Use option 3 to view logs"
-echo "   • Use option 7 to check ports & peer ID"
+echo "   • Use option 2 to view logs"
+echo "   • Use option 6 to check ports & peer ID"
 echo ""
 }
 
@@ -410,46 +410,35 @@ launch_dozzle() {
   bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Testing/refs/heads/main/Dozzle%20manager)
 }
 
-# ───[ RPC NODE MANAGEMENT ]───
-manage_rpc_node() {
-  echo -e "${CYAN}Launching RPC Node Manager...${NC}"
-  bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Backend-script-and-Testing/refs/heads/main/RPC%20installation)
-}
-
 # ──────────────[ MAIN MENU ]──────────────
 while true; do
   show_header
   echo ""
-  echo -e "${CYAN}1) RPC Node Management (Geth & Prysm)${NC}"
-  echo -e "${CYAN}2) Aztec Node Install${NC}"
-  echo -e "${CYAN}3) View Logs${NC}"
-  echo -e "${CYAN}4) View & Reconfigure .env${NC}"
-  echo -e "${CYAN}5) Check RPC Health${NC}"
-  echo -e "${CYAN}6) Delete Node${NC}"
-  echo -e "${CYAN}7) Check Ports & Peer ID${NC}"
-  echo -e "${CYAN}8) Update Node${NC}"
-  echo -e "${CYAN}9) Check Node Version${NC}"
-  echo -e "${CYAN}10) Check Node Performance${NC}"
-  echo -e "${CYAN}11) Show Running Docker Containers${NC}"
-  echo -e "${CYAN}12) Launch Dozzle (View Logs in Browser)${NC}"
-  echo -e "${CYAN}13) Exit${NC}"
+  echo -e "${CYAN}1) Full Install${NC}"
+  echo -e "${CYAN}2) View Logs${NC}"
+  echo -e "${CYAN}3) View & Reconfigure .env${NC}"
+  echo -e "${CYAN}4) Check RPC Health${NC}"
+  echo -e "${CYAN}5) Delete Node${NC}"
+  echo -e "${CYAN}6) Check Ports & Peer ID${NC}"
+  echo -e "${CYAN}7) Update Node${NC}"
+  echo -e "${CYAN}8) Check Node Version${NC}"
+  echo -e "${CYAN}9) Check Node Performance${NC}"
+  echo -e "${CYAN}10) Show Running Docker Containers${NC}"
+  echo -e "${CYAN}11) Launch Dozzle (View Logs in Browser)${NC}"
+  echo -e "${CYAN}12) Exit${NC}"
   echo ""
-  read -p "Choose option (1-13): " choice
+  read -p "Choose option (1-12): " choice
 
   case $choice in
     1) 
-      manage_rpc_node
-      ;;
-      
-    2) 
       install_aztec_node 
       ;;
       
-    3) 
+    2) 
       cd ~/aztec && sudo docker compose logs -f 
       ;;
       
-    4)
+    3)
       echo -e "${CYAN}───────────────────────────────────────────────${NC}"
       echo -e "${CYAN}Current .env Configuration:${NC}"
       echo -e "${CYAN}───────────────────────────────────────────────${NC}"
@@ -504,114 +493,114 @@ EOF
       fi
       ;;
       
-    5) 
+    4) 
       check_rpc_health 
       ;;
       
-    6)
-      echo ""
-      echo -e "${RED}╔═══════════════════════════════════════════╗${NC}"
-      echo -e "${RED}║    ⚠️  DELETE AZTEC NODE WARNING  ⚠️     ║${NC}"
-      echo -e "${RED}╚═══════════════════════════════════════════╝${NC}"
-      echo ""
-      
-      # Detect what will be deleted
-      echo -e "${YELLOW}Detecting Aztec components...${NC}"
-      echo ""
-      echo -e "${YELLOW}This will delete:${NC}"
-      echo "   • ~/aztec directory"
-      echo "   • ~/.aztec/testnet data"
-      
-      # Check for Aztec containers
-      AZTEC_CONTAINERS=$(sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | paste -sd ' ' -)
-      if [ ! -z "$AZTEC_CONTAINERS" ]; then
-        echo "   • Docker containers: $AZTEC_CONTAINERS"
-      fi
-      
-      # Check for Aztec images
-      AZTEC_IMAGES=$(sudo docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep aztec 2>/dev/null | paste -sd ' ' -)
-      if [ ! -z "$AZTEC_IMAGES" ]; then
-        echo "   • Docker images: $AZTEC_IMAGES"
-      fi
-      
-      echo ""
-      echo -e "${GREEN}✅ Other Docker containers will NOT be touched${NC}"
-      echo ""
-      echo -e "${RED}⚠️  This action cannot be undone${NC}"
-      read -p "➡ Are you sure? (y/N): " confirm
-      
-      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    5)
+  echo ""
+  echo -e "${RED}╔═══════════════════════════════════════════╗${NC}"
+  echo -e "${RED}║    ⚠️  DELETE AZTEC NODE WARNING  ⚠️     ║${NC}"
+  echo -e "${RED}╚═══════════════════════════════════════════╝${NC}"
+  echo ""
+  
+  # Detect what will be deleted
+  echo -e "${YELLOW}Detecting Aztec components...${NC}"
+  echo ""
+  echo -e "${YELLOW}This will delete:${NC}"
+  echo "   • ~/aztec directory"
+  echo "   • ~/.aztec/testnet data"
+  
+  # Check for Aztec containers
+  AZTEC_CONTAINERS=$(sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | paste -sd ' ' -)
+  if [ ! -z "$AZTEC_CONTAINERS" ]; then
+    echo "   • Docker containers: $AZTEC_CONTAINERS"
+  fi
+  
+  # Check for Aztec images
+  AZTEC_IMAGES=$(sudo docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep aztec 2>/dev/null | paste -sd ' ' -)
+  if [ ! -z "$AZTEC_IMAGES" ]; then
+    echo "   • Docker images: $AZTEC_IMAGES"
+  fi
+  
+  echo ""
+  echo -e "${GREEN}✅ Other Docker containers will NOT be touched${NC}"
+  echo ""
+  echo -e "${RED}⚠️  This action cannot be undone${NC}"
+  read -p "➡ Are you sure? (y/N): " confirm
+  
+  if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    echo ""
+    
+    # Progress bar function
+    show_progress() {
+      echo -ne "\r$1 ["
+      for ((i=0; i<$2; i++)); do echo -ne "█"; done
+      for ((i=$2; i<10; i++)); do echo -ne "░"; done
+      echo -ne "] ${3}%"
+      if [ "$3" == "100" ]; then
         echo ""
-        
-        # Progress bar function
-        show_progress() {
-          echo -ne "\r$1 ["
-          for ((i=0; i<$2; i++)); do echo -ne "█"; done
-          for ((i=$2; i<10; i++)); do echo -ne "░"; done
-          echo -ne "] ${3}%"
-          if [ "$3" == "100" ]; then
-            echo ""
-          fi
-        }
-        
-        # Stop and remove containers
-        show_progress "${CYAN}Stopping containers...${NC}" 2 20
-        sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | xargs -r sudo docker stop >/dev/null 2>&1 || true
-        sleep 0.5
-        
-        show_progress "${CYAN}Removing containers...${NC}" 4 40
-        sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | xargs -r sudo docker rm >/dev/null 2>&1 || true
-        sleep 0.5
-        
-        # Remove images
-        show_progress "${CYAN}Removing images...    ${NC}" 6 60
-        sudo docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep aztec 2>/dev/null | xargs -r sudo docker rmi -f >/dev/null 2>&1 || true
-        sleep 0.5
-        
-        # Remove directories
-        show_progress "${CYAN}Removing directories...${NC}" 8 80
-        rm -rf ~/aztec ~/.aztec/testnet >/dev/null 2>&1 || true
-        sleep 0.5
-        
-        show_progress "${CYAN}Cleaning up...        ${NC}" 10 100
-        echo ""
-        
-        echo -e "${GREEN}✅ Aztec Node completely deleted${NC}"
-        echo -e "${GREEN}✅ Other Docker containers remain intact${NC}"
-      else
-        echo -e "${YELLOW}❌ Delete cancelled${NC}"
       fi
-      ;;
+    }
+    
+    # Stop and remove containers
+    show_progress "${CYAN}Stopping containers...${NC}" 2 20
+    sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | xargs -r sudo docker stop >/dev/null 2>&1 || true
+    sleep 0.5
+    
+    show_progress "${CYAN}Removing containers...${NC}" 4 40
+    sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'aztec|sequencer' 2>/dev/null | xargs -r sudo docker rm >/dev/null 2>&1 || true
+    sleep 0.5
+    
+    # Remove images
+    show_progress "${CYAN}Removing images...    ${NC}" 6 60
+    sudo docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep aztec 2>/dev/null | xargs -r sudo docker rmi -f >/dev/null 2>&1 || true
+    sleep 0.5
+    
+    # Remove directories
+    show_progress "${CYAN}Removing directories...${NC}" 8 80
+    rm -rf ~/aztec ~/.aztec/testnet >/dev/null 2>&1 || true
+    sleep 0.5
+    
+    show_progress "${CYAN}Cleaning up...        ${NC}" 10 100
+    echo ""
+    
+    echo -e "${GREEN}✅ Aztec Node completely deleted${NC}"
+    echo -e "${GREEN}✅ Other Docker containers remain intact${NC}"
+  else
+    echo -e "${YELLOW}❌ Delete cancelled${NC}"
+  fi
+  ;;
       
-    7) 
+    6) 
       check_ports_and_peerid 
       ;;
       
+    7) 
+  echo -e "${CYAN}Updating Aztec Node...${NC}"
+  
+  cd ~/aztec
+  
+  # Stop node
+  docker compose down
+  
+  # Update version in docker-compose.yml
+  sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.3|' docker-compose.yml
+  
+  # Pull new image
+  docker pull aztecprotocol/aztec:2.0.3
+  
+  # Remove old Aztec images only
+  docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.0.3" | awk '{print $1}' | xargs -r docker rmi
+  
+  # Start with new version
+  docker compose up -d
+  
+  echo -e "${GREEN}✅ Node updated to v2.0.3${NC}"
+  read -p "Press Enter to continue..."
+  ;;
+      
     8) 
-      echo -e "${CYAN}Updating Aztec Node...${NC}"
-      
-      cd ~/aztec
-      
-      # Stop node
-      docker compose down
-      
-      # Update version in docker-compose.yml
-      sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.3|' docker-compose.yml
-      
-      # Pull new image
-      docker pull aztecprotocol/aztec:2.0.3
-      
-      # Remove old Aztec images only
-      docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.0.3" | awk '{print $1}' | xargs -r docker rmi
-      
-      # Start with new version
-      docker compose up -d
-      
-      echo -e "${GREEN}✅ Node updated to v2.0.3${NC}"
-      read -p "Press Enter to continue..."
-      ;;
-      
-    9) 
       echo -e "${CYAN}Checking Aztec Node Version...${NC}"
       if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
         sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
@@ -620,24 +609,24 @@ EOF
       fi
       ;;
       
-    10) 
+    9) 
       check_node_performance 
       ;;
       
-    11) 
+    10) 
       show_running_docker_containers 
       ;;
       
-    12) 
+    11) 
       launch_dozzle 
       ;;
       
-    13) 
+    12) 
       exit 0
       ;;
       
     *)
-      echo -e "${RED}❌ Invalid option. Please choose 1-13.${NC}"
+      echo -e "${RED}❌ Invalid option. Please choose 1-12.${NC}"
       sleep 2
       ;;
   esac
