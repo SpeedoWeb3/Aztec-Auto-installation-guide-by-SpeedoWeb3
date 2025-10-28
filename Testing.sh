@@ -202,7 +202,6 @@ EOF
   # Step 9: Create docker-compose.yml
   cat > docker-compose.yml <<'EOF'
 services:
-services:
   aztec-node:
     container_name: aztec-sequencer
     image: aztecprotocol/aztec:2.0.4
