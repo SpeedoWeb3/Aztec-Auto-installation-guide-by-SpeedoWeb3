@@ -413,35 +413,46 @@ launch_dozzle() {
   bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Testing/refs/heads/main/Dozzle%20manager)
 }
 
+# ───[ RPC NODE MANAGEMENT ]───
+manage_rpc_node() {
+  echo -e "${CYAN}Launching RPC Node Manager...${NC}"
+  bash <(curl -s https://raw.githubusercontent.com/SpeedoWeb3/Aztec-Backend-script-and-Testing/refs/heads/main/RPC%20installation)
+}
+
 # ──────────────[ MAIN MENU ]──────────────
 while true; do
   show_header
   echo ""
-  echo -e "${CYAN}1) Full Install${NC}"
-  echo -e "${CYAN}2) View Logs${NC}"
-  echo -e "${CYAN}3) View & Reconfigure .env${NC}"
-  echo -e "${CYAN}4) Check RPC Health${NC}"
-  echo -e "${CYAN}5) Delete Node${NC}"
-  echo -e "${CYAN}6) Check Ports & Peer ID${NC}"
-  echo -e "${CYAN}7) Update Node${NC}"
-  echo -e "${CYAN}8) Check Node Version${NC}"
-  echo -e "${CYAN}9) Check Node Performance${NC}"
-  echo -e "${CYAN}10) Show Running Docker Containers${NC}"
-  echo -e "${CYAN}11) Launch Dozzle (View Logs in Browser)${NC}"
-  echo -e "${CYAN}12) Exit${NC}"
+  echo -e "${CYAN}1) RPC Node Management (Geth & Prysm)${NC}"
+  echo -e "${CYAN}2) Aztec Node Install${NC}"
+  echo -e "${CYAN}3) View Logs${NC}"
+  echo -e "${CYAN}4) View & Reconfigure .env${NC}"
+  echo -e "${CYAN}5) Check RPC Health${NC}"
+  echo -e "${CYAN}6) Delete Node${NC}"
+  echo -e "${CYAN}7) Check Ports & Peer ID${NC}"
+  echo -e "${CYAN}8) Update Node${NC}"
+  echo -e "${CYAN}9) Check Node Version${NC}"
+  echo -e "${CYAN}10) Check Node Performance${NC}"
+  echo -e "${CYAN}11) Show Running Docker Containers${NC}"
+  echo -e "${CYAN}12) Launch Dozzle (View Logs in Browser)${NC}"
+  echo -e "${CYAN}13) Exit${NC}"
   echo ""
-  read -p "Choose option (1-12): " choice
+  read -p "Choose option (1-13): " choice
 
   case $choice in
     1) 
+      manage_rpc_node
+      ;;
+      
+  2) 
       install_aztec_node 
       ;;
       
-    2) 
+    3) 
       cd ~/aztec && sudo docker compose logs -f 
       ;;
       
-    3)
+    4)
       echo -e "${CYAN}───────────────────────────────────────────────${NC}"
       echo -e "${CYAN}Current .env Configuration:${NC}"
       echo -e "${CYAN}───────────────────────────────────────────────${NC}"
@@ -497,11 +508,11 @@ EOF
       fi
       ;;
       
-    4) 
+    5) 
       check_rpc_health 
       ;;
       
-    5)
+    6)
   echo ""
   echo -e "${RED}╔═══════════════════════════════════════════╗${NC}"
   echo -e "${RED}║    ⚠️  DELETE AZTEC NODE WARNING  ⚠️     ║${NC}"
@@ -576,11 +587,11 @@ EOF
   fi
   ;;
       
-    6) 
+    7) 
       check_ports_and_peerid 
       ;;
       
-7) 
+8) 
   echo -e "${CYAN}Updating Aztec Node...${NC}"
   
   cd ~/aztec
@@ -620,7 +631,7 @@ EOF
   read -p "Press Enter to continue..."
   ;;
       
-    8) 
+    9) 
       echo -e "${CYAN}Checking Aztec Node Version...${NC}"
       if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
         sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
@@ -629,19 +640,19 @@ EOF
       fi
       ;;
       
-    9) 
+    10) 
       check_node_performance 
       ;;
       
-    10) 
+    11) 
       show_running_docker_containers 
       ;;
       
-    11) 
+    12) 
       launch_dozzle 
       ;;
       
-    12) 
+    13) 
       exit 0
       ;;
       
