@@ -194,6 +194,7 @@ CONSENSUS_BEACON_URL=$BEACON_RPC
 VALIDATOR_PRIVATE_KEYS=$VAL_PRIV
 COINBASE=$WALLET_ADDR
 P2P_IP=$VPS_IP
+GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS=0xDCd9DdeAbEF70108cE02576df1eB333c4244C666
 EOF
 
   echo -e "${GREEN}✅ .env file created${NC}"
@@ -201,12 +202,14 @@ EOF
   # Step 9: Create docker-compose.yml
   cat > docker-compose.yml <<'EOF'
 services:
+services:
   aztec-node:
     container_name: aztec-sequencer
-    image: aztecprotocol/aztec:2.0.2
+    image: aztecprotocol/aztec:2.0.4
     restart: unless-stopped
     network_mode: host
     environment:
+      GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: ${GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS}
       ETHEREUM_HOSTS: ${ETHEREUM_RPC_URL}
       L1_CONSENSUS_HOST_URLS: ${CONSENSUS_BEACON_URL}
       DATA_DIRECTORY: /data
@@ -215,11 +218,12 @@ services:
       P2P_IP: ${P2P_IP}
       LOG_LEVEL: info
     entrypoint: >
-      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network testnet --node --archiver --sequencer'
+      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network testnet --node --archiver --sequencer --snapshots-url https://snapshots.aztec.graphops.xyz/files/'
     ports:
       - 40400:40400/tcp
       - 40400:40400/udp
       - 8080:8080
+      - 8880:8880
     volumes:
       - ${HOME}/.aztec/testnet/data/:/data
 EOF
@@ -234,8 +238,8 @@ echo -e "${GREEN}║  ✅ Installation Complete! 🚀        ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${CYAN}📊 Next Steps:${NC}"
-echo "   • Use option 3 to view logs"
-echo "   • Use option 7 to check ports & peer ID"
+echo "   • Use option 2 to view logs"
+echo "   • Use option 6 to check ports & peer ID"
 echo ""
 }
 
