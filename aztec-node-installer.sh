@@ -600,8 +600,11 @@ EOF
   # Add GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to environment section
   sed -i '/environment:/a \      GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: ${GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS}' docker-compose.yml
   
-  # Update version in docker-compose.yml
+  # Update version to 2.0.4
   sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.4|' docker-compose.yml
+  
+  # Add snapshots URL to entrypoint
+  sed -i "s|--sequencer'|--sequencer --snapshots-url https://snapshots.aztec.graphops.xyz/files/'|" docker-compose.yml
   
   # Pull new image
   docker compose pull
