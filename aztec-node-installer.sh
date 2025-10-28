@@ -576,7 +576,7 @@ EOF
       check_ports_and_peerid 
       ;;
       
-    7) 
+7) 
   echo -e "${CYAN}Updating Aztec Node...${NC}"
   
   cd ~/aztec
@@ -584,19 +584,32 @@ EOF
   # Stop node
   docker compose down
   
+  # Add GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to .env if not exists
+  if ! grep -q "GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS" .env; then
+    echo 'GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS=0xDCd9DdeAbEF70108cE02576df1eB333c4244C666' >> .env
+    echo -e "${GREEN}✅ Added GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to .env${NC}"
+  fi
+  
+  # Remove old GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS from docker-compose.yml
+  sed -i '/GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS/d' docker-compose.yml
+  
+  # Add GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to environment section
+  sed -i '/environment:/a \      GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: ${GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS}' docker-compose.yml
+  
   # Update version in docker-compose.yml
-  sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.3|' docker-compose.yml
+  sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.4|' docker-compose.yml
   
   # Pull new image
-  docker pull aztecprotocol/aztec:2.0.3
+  docker compose pull
   
   # Remove old Aztec images only
-  docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.0.3" | awk '{print $1}' | xargs -r docker rmi
+  docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.0.4" | awk '{print $1}' | xargs -r docker rmi
   
   # Start with new version
   docker compose up -d
   
-  echo -e "${GREEN}✅ Node updated to v2.0.3${NC}"
+  echo -e "${GREEN}✅ Node updated to v2.0.4${NC}"
+  echo -e "${GREEN}✅ GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS configured${NC}"
   read -p "Press Enter to continue..."
   ;;
       
