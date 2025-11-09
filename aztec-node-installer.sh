@@ -632,17 +632,18 @@ EOF
   read -p "Press Enter to continue..."
   ;;
     9) 
-      echo -e "${CYAN}Checking Aztec Node Version...${NC}"
-      if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
-        sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
-      else
-        echo -e "${RED}❌ Aztec container is not running!${NC}"
-      fi
-      ;;
-      
-    10) 
-      check_node_performance 
-      ;;
+  echo -e "${CYAN}Checking Aztec Node Version...${NC}"
+  if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
+    sudo docker exec aztec-sequencer node /usr/src/yarn-project/aztec/dest/bin/index.js --version
+  else
+    echo -e "${RED}❌ Aztec container is not running!${NC}"
+  fi
+  read -p "Press Enter to continue..."
+  ;;
+  
+10) 
+  check_node_performance 
+  ;;
       
     11) 
       show_running_docker_containers 
