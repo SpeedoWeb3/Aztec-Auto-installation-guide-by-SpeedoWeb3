@@ -204,11 +204,10 @@ EOF
 services:
   aztec-node:
     container_name: aztec-sequencer
-    image: aztecprotocol/aztec:2.0.4
+    image: aztecprotocol/aztec:2.1.2
     restart: unless-stopped
     network_mode: host
     environment:
-      GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: ${GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS}
       ETHEREUM_HOSTS: ${ETHEREUM_RPC_URL}
       L1_CONSENSUS_HOST_URLS: ${CONSENSUS_BEACON_URL}
       DATA_DIRECTORY: /data
@@ -217,14 +216,13 @@ services:
       P2P_IP: ${P2P_IP}
       LOG_LEVEL: info
     entrypoint: >
-      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network testnet --node --archiver --sequencer --snapshots-url https://snapshots.aztec.graphops.xyz/files/'
+      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network testnet --node --archiver --sequencer'
     ports:
       - 40400:40400/tcp
       - 40400:40400/udp
       - 8080:8080
-      - 8880:8880
     volumes:
-      - ${HOME}/.aztec/testnet/data/:/data
+      - /root/.aztec/testnet/data/:/data
 EOF
 
   # Step 10: Start node
@@ -592,7 +590,7 @@ EOF
       ;;
       
 8) 
-  echo -e "${CYAN}Updating Aztec Node...${NC}"
+  echo -e "${CYAN}Updating Aztec Node to v2.1.2...${NC}"
   
   cd ~/aztec
   
@@ -611,20 +609,28 @@ EOF
   # Add GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS to environment section
   sed -i '/environment:/a \      GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS: ${GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS}' docker-compose.yml
   
-  # Update version to 2.0.4
-  sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.0.4|' docker-compose.yml
+  # Remove snapshots URL (no longer needed in 2.1.2)
+  sed -i "s| --snapshots-url https://snapshots.aztec.graphops.xyz/files/||" docker-compose.yml
   
-  # Add snapshots URL to entrypoint
-  sed -i "s|--sequencer'|--sequencer --snapshots-url https://snapshots.aztec.graphops.xyz/files/'|" docker-compose.yml
+  # Set sync mode to full
+  sed -i 's|--sync-mode.*|--sync-mode full|' docker-compose.yml
+  
+  # Update version to 2.1.2
+  sed -i 's|image: aztecprotocol/aztec:.*|image: aztecprotocol/aztec:2.1.2|' docker-compose.yml
   
   # Pull new image
   docker compose pull
   
   # Remove old Aztec images only
-  docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.0.4" | awk '{print $1}' | xargs -r docker rmi
+  docker images aztecprotocol/aztec --format "{{.ID}} {{.Tag}}" | grep -v "2.1.2" | awk '{print $1}' | xargs -r docker rmi
   
   # Start with new version
   docker compose up -d
+  
+  echo -e "${GREEN}✅ Node updated to v2.1.2${NC}"
+  echo -e "${GREEN}✅ GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS configured${NC}"
+  read -p "Press Enter to continue..."
+  ;;
   
   echo -e "${GREEN}✅ Node updated to v2.0.4${NC}"
   echo -e "${GREEN}✅ GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS configured${NC}"
