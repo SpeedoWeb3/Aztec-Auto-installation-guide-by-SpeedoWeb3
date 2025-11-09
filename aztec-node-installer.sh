@@ -631,7 +631,6 @@ EOF
   echo -e "${GREEN}✅ GOVERNANCE_PROPOSER_PAYLOAD_ADDRESS configured${NC}"
   read -p "Press Enter to continue..."
   ;;
-
     9) 
       echo -e "${CYAN}Checking Aztec Node Version...${NC}"
       if sudo docker ps --format '{{.Names}}' | grep -q '^aztec-sequencer$'; then
